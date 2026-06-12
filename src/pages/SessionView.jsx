@@ -1,77 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAppState } from '../state/AppState.jsx';
 import { SCHEDULE } from '../data/schedule.js';
 import { SCHEDULE_HARM_MINOR } from '../data/scheduleHarmMinor.js';
-import { KEYS, readKey, writeKey } from '../state/storage.js';
+import { useSession, getSession, sessionStore, readSessionDraft, timerNow, fmtMs } from '../state/sessionStore.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
-import { metronome } from '../audio/metronome.js';
-import { ensureRunning } from '../audio/engine.js';
+import { playChime } from '../audio/engine.js';
 import { drone } from '../audio/voices.js';
 import { noteToChromatic, normalizeKey } from '../data/notes.js';
 import { openMetronomeSheet } from '../components/metronome/metroShared.js';
 
-function fmt(ms) {
-  const neg = ms < 0;
-  const s = Math.floor(Math.abs(ms) / 1000);
-  const m = Math.floor(s / 60);
-  const ss = String(s % 60).padStart(2, '0');
-  return `${neg ? '+' : ''}${m}:${ss}`;
-}
-
-function chime() {
-  try {
-    const c = ensureRunning();
-    [0, 0.18].forEach((off, i) => {
-      const t = c.currentTime + off;
-      const osc = c.createOscillator();
-      const g = c.createGain();
-      osc.connect(g);
-      g.connect(c.destination);
-      osc.frequency.value = i === 0 ? 880 : 1320;
-      g.gain.setValueAtTime(0.22, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-      osc.start(t);
-      osc.stop(t + 0.5);
-    });
-  } catch {
-    // audio unavailable
-  }
+function scheduleFor(track) {
+  return track === 'major' ? SCHEDULE : SCHEDULE_HARM_MINOR;
 }
 
 export default function SessionView({ dayIdx, onClose }) {
-  const { track, week, currentKey, weekTasks, toggleTask, logHistory } = useAppState();
-  const schedule = track === 'major' ? SCHEDULE : SCHEDULE_HARM_MINOR;
-  const day = schedule[Math.min(dayIdx, schedule.length - 1)];
-
-  const draftInit = useRef(null);
-  if (draftInit.current === null) {
-    const d = readKey(KEYS.sessionDraft, null);
-    draftInit.current =
-      d && d.dayIdx === dayIdx && d.week === week && d.track === track && Date.now() - d.sessionStartedAt < 12 * 3600_000
-        ? d
-        : false;
-  }
-
-  const [phase, setPhase] = useState(draftInit.current ? 'resume' : 'running');
-  const [blockIdx, setBlockIdx] = useState(draftInit.current ? draftInit.current.blockIdx : 0);
-  const [timer, setTimer] = useState(() =>
-    draftInit.current
-      ? draftInit.current.timer
-      : { startedAt: Date.now(), pausedAccum: 0, pausedAt: null, extraMs: 0 }
-  );
-  const [blockLog, setBlockLog] = useState(draftInit.current ? draftInit.current.blockLog : []);
-  const [sessionStartedAt] = useState(draftInit.current ? draftInit.current.sessionStartedAt : Date.now());
-  const [, forceRender] = useState(0);
-  const chimedRef = useRef(false);
+  const { track, week, currentKey, weekTasks, toggleTask } = useAppState();
+  const active = useSession();
   const [summary, setSummary] = useState(null);
+  const [draft, setDraft] = useState(() => (getSession() ? null : readSessionDraft()));
+  const [, forceRender] = useState(0);
 
-  const block = day.blocks[blockIdx];
-  const running = phase === 'running';
-  useWakeLock(running);
-
-  // re-render tick (timestamp math keeps it correct in background)
+  // no active session and no draft to ask about -> start immediately
   useEffect(() => {
-    if (!running) return;
+    if (!active && !draft && !summary) {
+      sessionStore.start({ dayIdx, week, key: currentKey, track });
+    }
+  }, [active, draft, summary, dayIdx, week, currentKey, track]);
+
+  useWakeLock(!!active);
+
+  // render tick (timestamp math keeps it correct in background)
+  useEffect(() => {
+    if (!active) return;
     const iv = setInterval(() => forceRender((x) => x + 1), 500);
     const onVis = () => forceRender((x) => x + 1);
     document.addEventListener('visibilitychange', onVis);
@@ -79,117 +39,92 @@ export default function SessionView({ dayIdx, onClose }) {
       clearInterval(iv);
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [running]);
+  }, [active]);
 
-  // persist draft on every state transition
-  useEffect(() => {
-    if (phase === 'running') {
-      writeKey(KEYS.sessionDraft, { dayIdx, week, track, blockIdx, timer, blockLog, sessionStartedAt, savedAt: Date.now() });
-    }
-  }, [phase, dayIdx, week, track, blockIdx, timer, blockLog, sessionStartedAt]);
+  const day = active ? scheduleFor(active.track)[active.dayIdx] : scheduleFor(track)[Math.min(dayIdx, 5)];
+  const block = active ? day.blocks[active.blockIdx] : null;
 
-  const now = Date.now();
-  const pausedMs = timer.pausedAccum + (timer.pausedAt ? now - timer.pausedAt : 0);
-  const elapsedMs = now - timer.startedAt - pausedMs;
-  const plannedMs = block ? block.min * 60_000 + timer.extraMs : 0;
+  const { elapsedMs, isPaused } = active ? timerNow(active) : { elapsedMs: 0, isPaused: false };
+  const plannedMs = block ? block.min * 60_000 + active.timer.extraMs : 0;
   const remainingMs = plannedMs - elapsedMs;
   const overrun = remainingMs < 0;
-  const paused = !!timer.pausedAt;
 
   useEffect(() => {
-    if (running && overrun && !chimedRef.current) {
-      chimedRef.current = true;
-      chime();
+    if (active && overrun && !active.chimed) {
+      playChime();
+      sessionStore.markChimed();
     }
-  }, [running, overrun]);
+  }, [active, overrun]);
 
-  const blockTasksDone = block ? block.tasks.filter((t) => weekTasks[t.id]).length : 0;
-
-  const logBlock = useCallback(
+  const buildEntry = useCallback(
     (skipped) => ({
       title: block.title,
       plannedMin: block.min,
-      actualSec: Math.max(0, Math.round(elapsedMs / 1000)),
-      tasksDone: blockTasksDone,
+      actualSec: Math.max(0, Math.round(timerNow(active).elapsedMs / 1000)),
+      tasksDone: block.tasks.filter((t) => weekTasks[t.id]).length,
       tasksTotal: block.tasks.length,
       skipped,
     }),
-    [block, elapsedMs, blockTasksDone]
+    [block, active, weekTasks]
   );
 
-  const finish = useCallback(
-    (log, completed) => {
-      drone.stop();
-      metronome.stop();
-      const record = {
-        id: `s${Date.now()}`,
-        ts: new Date().toISOString(),
-        week,
-        key: currentKey,
-        track,
-        dayIdx,
-        day: day.day,
-        focus: day.focus,
-        plannedMin: day.totalMin,
-        actualSec: log.reduce((a, b) => a + b.actualSec, 0),
-        blocks: log,
-        completed,
-      };
-      logHistory(record);
-      writeKey(KEYS.sessionDraft, null);
-      setSummary(record);
-      setPhase('summary');
-    },
-    [week, currentKey, track, dayIdx, day, logHistory]
+  const buildRecord = useCallback(
+    (log, completed) => ({
+      id: `s${Date.now()}`,
+      ts: new Date().toISOString(),
+      week: active.week,
+      key: active.key,
+      track: active.track,
+      dayIdx: active.dayIdx,
+      day: day.day,
+      focus: day.focus,
+      plannedMin: day.totalMin,
+      actualSec: log.reduce((a, b) => a + b.actualSec, 0),
+      blocks: log,
+      completed,
+    }),
+    [active, day]
   );
 
   const advance = useCallback(
     (skipped = false) => {
-      const entry = logBlock(skipped);
-      const nextLog = [...blockLog, entry];
-      chimedRef.current = false;
-      if (blockIdx + 1 < day.blocks.length) {
-        setBlockLog(nextLog);
-        setBlockIdx(blockIdx + 1);
-        setTimer({ startedAt: Date.now(), pausedAccum: 0, pausedAt: null, extraMs: 0 });
+      const entry = buildEntry(skipped);
+      if (active.blockIdx + 1 < day.blocks.length) {
+        sessionStore.advance(entry);
       } else {
-        finish(nextLog, true);
+        drone.stop();
+        const record = buildRecord([...active.blockLog, entry], true);
+        sessionStore.finish(record);
+        setSummary(record);
       }
     },
-    [blockIdx, blockLog, day.blocks.length, logBlock, finish]
+    [active, day, buildEntry, buildRecord]
   );
 
   const endEarly = useCallback(() => {
     if (!window.confirm('End session? Progress so far will be saved.')) return;
-    finish([...blockLog, logBlock(false)], false);
-  }, [blockLog, logBlock, finish]);
+    drone.stop();
+    const record = buildRecord([...active.blockLog, buildEntry(false)], false);
+    sessionStore.finish(record);
+    setSummary(record);
+  }, [active, buildEntry, buildRecord]);
 
-  const togglePause = () =>
-    setTimer((t) =>
-      t.pausedAt
-        ? { ...t, pausedAccum: t.pausedAccum + (Date.now() - t.pausedAt), pausedAt: null }
-        : { ...t, pausedAt: Date.now() }
-    );
-
-  const isImprov = block && /improv|drone/i.test(block.title);
-  const droneOn = drone.isOn();
-
-  if (phase === 'resume') {
+  // ---------- resume prompt ----------
+  if (!active && draft && !summary) {
+    const dDay = scheduleFor(draft.track)[draft.dayIdx];
     return (
       <div className="session-screen">
         <div className="session-summary">
           <div className="session-summary-title">Resume session?</div>
           <div className="session-summary-sub">
-            You have an unfinished {day.day} session (block {blockIdx + 1} of {day.blocks.length}).
+            Unfinished {dDay.day} session ({draft.key} {draft.track === 'major' ? 'Major' : 'Harm. Minor'}) — block {draft.blockIdx + 1} of {dDay.blocks.length}.
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               className="session-ctl primary"
               onClick={() => {
-                // time while the tab was dead doesn't count as practice
-                const savedAt = draftInit.current?.savedAt || Date.now();
-                setTimer((t) => (t.pausedAt ? t : { ...t, pausedAccum: t.pausedAccum + (Date.now() - savedAt) }));
-                setPhase('running');
+                sessionStore.adoptDraft(draft);
+                setDraft(null);
               }}
             >
               Resume
@@ -197,11 +132,8 @@ export default function SessionView({ dayIdx, onClose }) {
             <button
               className="session-ctl"
               onClick={() => {
-                writeKey(KEYS.sessionDraft, null);
-                setBlockIdx(0);
-                setBlockLog([]);
-                setTimer({ startedAt: Date.now(), pausedAccum: 0, pausedAt: null, extraMs: 0 });
-                setPhase('running');
+                sessionStore.discardDraft();
+                setDraft(null);
               }}
             >
               Restart day
@@ -213,7 +145,8 @@ export default function SessionView({ dayIdx, onClose }) {
     );
   }
 
-  if (phase === 'summary' && summary) {
+  // ---------- summary ----------
+  if (summary) {
     const mins = Math.round(summary.actualSec / 60);
     const tasksDone = summary.blocks.reduce((a, b) => a + b.tasksDone, 0);
     const tasksTotal = summary.blocks.reduce((a, b) => a + b.tasksTotal, 0);
@@ -221,7 +154,9 @@ export default function SessionView({ dayIdx, onClose }) {
       <div className="session-screen">
         <div className="session-summary">
           <div className="session-summary-title">Session complete</div>
-          <div className="session-summary-sub">{day.day} — {day.focus} · {currentKey} {track === 'major' ? 'Major' : 'Harm. Minor'}</div>
+          <div className="session-summary-sub">
+            {summary.day} — {summary.focus} · {summary.key} {summary.track === 'major' ? 'Major' : 'Harm. Minor'}
+          </div>
           <div className="session-stat-row">
             <div className="session-stat">
               <span className="session-stat-label">Time</span>
@@ -252,27 +187,48 @@ export default function SessionView({ dayIdx, onClose }) {
     );
   }
 
+  if (!active || !block) return null; // starting up
+
+  const isImprov = /improv|drone/i.test(block.title);
+  const droneOn = drone.isOn();
+
   return (
     <div className="session-screen">
       <div className="session-top">
-        <span className="session-block-count">Block {blockIdx + 1}/{day.blocks.length}</span>
+        <button className="session-minimize" onClick={onClose} title="Minimize — session keeps running while you use the tools">
+          ⌄
+        </button>
+        <span className="session-block-count">Block {active.blockIdx + 1}/{day.blocks.length}</span>
         <span className="session-block-title">{block.title}</span>
-        <span className="session-elapsed">session {fmt(now - sessionStartedAt - 0)}</span>
+        <span className="session-elapsed">session {fmtMs(Date.now() - active.sessionStartedAt)}</span>
+      </div>
+
+      <div className="session-blocks-strip" aria-label="Blocks in this session">
+        {day.blocks.map((b, i) => {
+          const state = i < active.blockIdx ? 'done' : i === active.blockIdx ? 'now' : 'todo';
+          return (
+            <div key={i} className={`sblock-chip ${state}`} title={`${b.title} · ${b.min} min`}>
+              <span className="sblock-num">{state === 'done' ? '✓' : i + 1}</span>
+              <span className="sblock-title">{b.title}</span>
+              <span className="sblock-min">{b.min}m</span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="session-timer-wrap">
         <div className={`session-timer ${overrun ? 'overrun' : ''}`} aria-live="off">
-          {fmt(overrun ? -remainingMs : remainingMs)}
+          {fmtMs(overrun ? -remainingMs : remainingMs)}
         </div>
         <div className="session-timer-sub">
-          {paused ? 'Paused' : overrun ? 'Block time elapsed' : `${block.min} min block${timer.extraMs ? ` +${timer.extraMs / 60000}` : ''}`}
+          {isPaused ? 'Paused' : overrun ? 'Block time elapsed' : `${block.min} min block${active.timer.extraMs ? ` +${active.timer.extraMs / 60000}` : ''}`}
         </div>
       </div>
 
       {overrun && (
         <div className="session-overrun-banner">
           <span>Block time elapsed — wrap up or keep going.</span>
-          <button className="session-ctl" onClick={() => { setTimer((t) => ({ ...t, extraMs: t.extraMs + 5 * 60_000 })); chimedRef.current = false; }}>+5 min</button>
+          <button className="session-ctl" onClick={() => sessionStore.addFive()}>+5 min</button>
           <button className="session-ctl primary" onClick={() => advance(false)}>Next block →</button>
         </div>
       )}
@@ -289,19 +245,26 @@ export default function SessionView({ dayIdx, onClose }) {
         ))}
       </div>
 
-      {blockIdx + 1 < day.blocks.length && (
+      {active.blockIdx + 1 < day.blocks.length && (
         <div className="session-next">
-          Next up — <b>{day.blocks[blockIdx + 1].title}</b> · {day.blocks[blockIdx + 1].min} min
+          Next up — <b>{day.blocks[active.blockIdx + 1].title}</b> · {day.blocks[active.blockIdx + 1].min} min
         </div>
       )}
 
       <div className="session-controls">
-        <button className="session-ctl primary" onClick={togglePause}>{paused ? '▶ Resume' : '⏸ Pause'}</button>
+        {active.blockIdx > 0 && (
+          <button className="session-ctl" onClick={() => sessionStore.goPrev()} title="Back to the previous block (its time re-logs when you advance again)">
+            ← Prev
+          </button>
+        )}
+        <button className="session-ctl primary" onClick={() => sessionStore.togglePause()}>
+          {isPaused ? '▶ Resume' : '⏸ Pause'}
+        </button>
         <button className="session-ctl" onClick={() => advance(true)}>↷ Skip</button>
         {!overrun && (
-          <button className="session-ctl" onClick={() => setTimer((t) => ({ ...t, extraMs: t.extraMs + 5 * 60_000 }))}>+5 min</button>
+          <button className="session-ctl" onClick={() => sessionStore.addFive()}>+5 min</button>
         )}
-        {blockIdx + 1 < day.blocks.length && !overrun && (
+        {active.blockIdx + 1 < day.blocks.length && !overrun && (
           <button className="session-ctl" onClick={() => advance(false)}>Next →</button>
         )}
         <button className="session-ctl" onClick={openMetronomeSheet}>◔ Metronome</button>
@@ -310,11 +273,11 @@ export default function SessionView({ dayIdx, onClose }) {
             className={`session-ctl ${droneOn ? 'primary' : ''}`}
             onClick={() => {
               if (drone.isOn()) drone.stop();
-              else drone.start(noteToChromatic(normalizeKey(currentKey)));
+              else drone.start(noteToChromatic(normalizeKey(active.key)));
               forceRender((x) => x + 1);
             }}
           >
-            ∿ Drone {currentKey}
+            ∿ Drone {active.key}
           </button>
         )}
         <button className="session-ctl danger" onClick={endEarly}>End session</button>

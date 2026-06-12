@@ -70,6 +70,27 @@ export function setVolume(busName, v) {
   if (bus) bus.gain.value = v;
 }
 
+// two-tone block-elapsed chime
+export function playChime() {
+  try {
+    const c = ensureRunning();
+    [0, 0.18].forEach((off, i) => {
+      const t = c.currentTime + off;
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.connect(g);
+      g.connect(c.destination);
+      osc.frequency.value = i === 0 ? 880 : 1320;
+      g.gain.setValueAtTime(0.22, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.start(t);
+      osc.stop(t + 0.5);
+    });
+  } catch {
+    // audio unavailable
+  }
+}
+
 let noiseBuf = null;
 function getNoiseBuffer(c) {
   if (!noiseBuf) {

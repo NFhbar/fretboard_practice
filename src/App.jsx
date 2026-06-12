@@ -4,7 +4,9 @@ import { AppStateProvider } from './state/AppState.jsx';
 import { attachUnlockOnGesture } from './audio/engine.js';
 import TabBar from './components/ui/TabBar.jsx';
 import GlobalMetronome from './components/metronome/GlobalMetronome.jsx';
+import SessionMiniBar from './components/SessionMiniBar.jsx';
 import PracticeHome from './pages/PracticeHome.jsx';
+import { getSession } from './state/sessionStore.js';
 import SessionView from './pages/SessionView.jsx';
 import DrillsView from './pages/DrillsView.jsx';
 import ProgressView from './pages/ProgressView.jsx';
@@ -63,6 +65,9 @@ export default function App() {
       <div className="shell">
         {!hideTabBar && <TabBar active={root === 'tools' ? 'tools' : root} onNavigate={(id) => navigate(id)} />}
         <div className="shell-content">{content}</div>
+        {root !== 'session' && (
+          <SessionMiniBar onOpen={() => navigate(`session/${getSession()?.dayIdx ?? 0}`)} />
+        )}
         <GlobalMetronome />
       </div>
     </AppStateProvider>
