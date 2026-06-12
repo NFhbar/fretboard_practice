@@ -124,19 +124,25 @@ describe('CAGED position bands', () => {
 
   it('tiles the neck in C-A-G-E-D order for the key of C', () => {
     const bands = buildCagedBands('C', 'all');
-    const lowestPerShape = {};
+    // octave-wrapped shapes can poke past the nut as clamped partials (e.g. a 2-fret
+    // D-shape fragment at 0-1 for key C) — order is defined by the lowest FULL box
+    const lowestFull = {};
     for (const b of bands) {
-      if (!(b.shape in lowestPerShape) || b.minFret < lowestPerShape[b.shape]) {
-        lowestPerShape[b.shape] = b.minFret;
+      const dots = getVariants(CAGED_SHAPES.Major[b.shape].scale)[0];
+      const fs = dots.map((d) => d.f);
+      const templateSpan = Math.max(...fs) - Math.min(...fs);
+      if (b.maxFret - b.minFret !== templateSpan) continue; // clamped partial
+      if (!(b.shape in lowestFull) || b.minFret < lowestFull[b.shape]) {
+        lowestFull[b.shape] = b.minFret;
       }
     }
-    expect(lowestPerShape.C).toBe(0); // open-position C shape
+    expect(lowestFull.C).toBe(0); // open-position C shape
     const order = ['C', 'A', 'G', 'E', 'D'];
     for (let i = 1; i < order.length; i++) {
       expect(
-        lowestPerShape[order[i]],
+        lowestFull[order[i]],
         `${order[i]} should sit above ${order[i - 1]}`
-      ).toBeGreaterThan(lowestPerShape[order[i - 1]]);
+      ).toBeGreaterThan(lowestFull[order[i - 1]]);
     }
   });
 });
