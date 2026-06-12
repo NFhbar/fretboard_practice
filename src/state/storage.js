@@ -82,3 +82,55 @@ export function migrate() {
   // future migrations: if (stored < 2) { ...transform keys... }
   writeKey(KEYS.schemaVersion, SCHEMA_VERSION);
 }
+
+// ---- Backup (export / import) ----
+
+const IMPORT_STAGING = 'fp.importStaging';
+
+export function buildBackup() {
+  const data = {};
+  for (const key of Object.values(KEYS)) {
+    if (key === KEYS.sessionDraft) continue; // ephemeral, device-specific
+    const v = readKey(key, undefined);
+    if (v !== undefined) data[key] = v;
+  }
+  return {
+    app: 'fretboard-practice',
+    schemaVersion: SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+}
+
+export function validateBackup(payload) {
+  if (!payload || payload.app !== 'fretboard-practice' || typeof payload.data !== 'object' || payload.data === null) {
+    return { ok: false, reason: 'Not a fretboard-practice backup file.' };
+  }
+  if ((payload.schemaVersion || 1) > SCHEMA_VERSION) {
+    return { ok: false, reason: 'This backup is from a newer app version — update the app first.' };
+  }
+  return { ok: true };
+}
+
+// Imports replace data via a staging slot applied at boot (before React mounts),
+// so live components flushing state on unload can't clobber the imported keys.
+export function stageImport(data) {
+  sessionStorage.setItem(IMPORT_STAGING, JSON.stringify(data));
+}
+
+export function applyStagedImport() {
+  let raw;
+  try {
+    raw = sessionStorage.getItem(IMPORT_STAGING);
+    if (!raw) return;
+    sessionStorage.removeItem(IMPORT_STAGING);
+    const data = JSON.parse(raw);
+    for (const key of Object.values(KEYS)) {
+      if (key in data) writeKey(key, data[key]);
+      else if (key !== KEYS.schemaVersion) localStorage.removeItem(key);
+    }
+  } catch {
+    // corrupt staging — drop it rather than wreck existing data
+    sessionStorage.removeItem(IMPORT_STAGING);
+  }
+}

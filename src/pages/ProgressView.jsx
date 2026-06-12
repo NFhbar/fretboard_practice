@@ -4,6 +4,7 @@ import { KEYS, readKey } from '../state/storage.js';
 import { KEY_CYCLE } from '../data/notes.js';
 import { MASTERY_ITEMS } from '../data/mastery.js';
 import { categoryStats } from './drill/drillGen.js';
+import BackupControls from '../components/BackupControls.jsx';
 
 function dayKey(d) {
   return d.toISOString().slice(0, 10);
@@ -163,7 +164,7 @@ export default function ProgressView() {
       </div>
 
       {completedWeeks.length > 0 && (
-        <div className="card">
+        <div className="card" style={{ marginBottom: 20 }}>
           <div className="section-label" style={{ padding: '16px 16px 0' }}>Completed weeks</div>
           {[...completedWeeks].reverse().map((w, i) => (
             <div key={i} className="history-row">
@@ -174,6 +175,8 @@ export default function ProgressView() {
           ))}
         </div>
       )}
+
+      <BackupControls />
     </div>
   );
 }
