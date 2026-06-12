@@ -51,7 +51,6 @@ export default function Modes({ onClose }) {
             {getChordsFn(currentKey, use7ths, useFlats).map((mode, mi) => {
               const rootC = noteToChromatic(normKey);
               const parentC = (rootC - modeOffsets[mi] + 12) % 12;
-              const parentKey = noteSet[parentC];
               return (
                 <tr key={mode.name} className={mi === 0 ? 'mode-current' : ''}>
                   <td className="mode-name">{mode.name}</td>

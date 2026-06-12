@@ -85,7 +85,7 @@ export default function ProgressionPlayer({ progression, barsPerChord = 1 }) {
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [bpm, cfg.volume, cfg.sound, progression, barsPerChord]);
+  }, [bpm, cfg, progression, barsPerChord]);
 
   useEffect(() => stop, [stop]);
   useEffect(() => {

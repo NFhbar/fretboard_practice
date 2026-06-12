@@ -19,7 +19,7 @@ export function AppStateProvider({ children }) {
   const track = settings.track;
   const currentKey = KEY_CYCLE[(week - 1) % KEY_CYCLE.length];
   const nextKey = KEY_CYCLE[week % KEY_CYCLE.length];
-  const weekTasks = tasks[week] || {};
+  const weekTasks = useMemo(() => tasks[week] || {}, [tasks, week]);
 
   const updateSettings = useCallback(
     (patch) => setSettings((s) => ({ ...s, ...patch })),

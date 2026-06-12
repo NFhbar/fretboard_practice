@@ -23,7 +23,6 @@ export default function DiatonicPlayer({ items, setHighlight }) {
   const setChordsOn = (fn) => updateSettings({ loopChords: typeof fn === 'function' ? fn(chordsOn) : fn });
   const [playing, setPlaying] = useState(false);
   const [enabled, setEnabled] = useState(() => items.map((_, i) => i));
-  const [currentIdx, setCurrentIdx] = useState(null);
   const [nextIdx, setNextIdx] = useState(null);
   const [beat, setBeat] = useState(0);
   const rafRef = useRef(null);
@@ -55,7 +54,6 @@ export default function DiatonicPlayer({ items, setHighlight }) {
     rafRef.current = null;
     pendingUi.current = [];
     setPlaying(false);
-    setCurrentIdx(null);
     setNextIdx(null);
     setBeat(0);
     setHighlight([]);
@@ -96,7 +94,6 @@ export default function DiatonicPlayer({ items, setHighlight }) {
       let applied = null;
       while (q.length && q[0].time <= now) applied = q.shift();
       if (applied) {
-        setCurrentIdx(applied.idx);
         setNextIdx(applied.nextIdx);
         setHighlight([applied.idx]);
       }
