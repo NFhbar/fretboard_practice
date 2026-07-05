@@ -9,6 +9,15 @@ import { getDiatonicTriads, getDiatonic7ths, getHarmMinorTriads, getHarmMinor7th
 import { solveVoicing } from '../theory/voicingSolver.js';
 import { buildCagedBands } from '../theory/noteMap.js';
 import { OPEN_STRINGS } from './notes.js';
+import { getSchedule } from './scheduleMerged.js';
+import {
+  scaleTargetsOnString,
+  neighborFret,
+  ornamentsFor,
+  buildTimeline,
+  cagedArpTargets,
+  pcAt,
+} from '../theory/chromatic.js';
 
 describe('schedules', () => {
   it('both tracks have 6 days with blocks and tasks', () => {
@@ -143,6 +152,84 @@ describe('CAGED position bands', () => {
         lowestFull[order[i]],
         `${order[i]} should sit above ${order[i - 1]}`
       ).toBeGreaterThan(lowestFull[order[i - 1]]);
+    }
+  });
+});
+
+describe('merged schedule (chromaticism blocks)', () => {
+  it('adds one chromaticism block per day on both tracks with unique ids', () => {
+    const ids = [];
+    for (const track of ['major', 'harmonic-minor']) {
+      const sched = getSchedule(track);
+      expect(sched).toHaveLength(6);
+      for (const day of sched) {
+        const chromatic = day.blocks.filter((b) => b.title.startsWith('Chromaticism'));
+        expect(chromatic).toHaveLength(1);
+        ids.push(...day.blocks.flatMap((b) => b.tasks.map((t) => t.id)));
+      }
+    }
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('adjusts day totalMin by the chromatic block minutes', () => {
+    const base = getSchedule('major')[0];
+    const chr = base.blocks[base.blocks.length - 1];
+    expect(base.totalMin).toBe(120 + chr.min); // Monday was 120 in the base schedule
+  });
+});
+
+describe('chromaticism theory', () => {
+  it('finds scale targets on the A string in C major', () => {
+    const frets = scaleTargetsOnString('C', 'major', 5).map((t) => t.fret);
+    // A string (open A): B2 C3 D5 E7 F8 G10 A12
+    expect(frets).toEqual([2, 3, 5, 7, 8, 10, 12]);
+  });
+
+  it('diatonic neighbors are adjacent scale tones on the same string', () => {
+    expect(neighborFret('C', 'major', 5, 3, +1)).toBe(5); // C -> D
+    expect(neighborFret('C', 'major', 5, 3, -1)).toBe(2); // C -> B
+  });
+
+  it('handles the harmonic minor augmented-2nd neighbor', () => {
+    // A harmonic minor on the A string: F at fret 8, G# at fret 11 (3-fret neighbor)
+    expect(neighborFret('A', 'harmonic-minor', 5, 8, +1)).toBe(11);
+  });
+
+  it('mirrors enclosure cells by run direction', () => {
+    const asc = ornamentsFor('enc3', { key: 'C', track: 'major', string: 5, fret: 7, dir: 1 }); // target E
+    expect(asc.map((o) => o.role)).toEqual(['neighbor', 'approach']);
+    expect(asc[0].fret).toBe(8); // F above (diatonic)
+    expect(asc[1].fret).toBe(6); // D# below (chromatic)
+    const desc = ornamentsFor('enc3', { key: 'C', track: 'major', string: 5, fret: 7, dir: -1 });
+    expect(desc[0].fret).toBe(5); // D below (diatonic)
+    expect(desc[1].fret).toBe(8); // F above (chromatic-side approach)
+  });
+
+  it('4-note cell passes through the target on the off-beat', () => {
+    const orn = ornamentsFor('enc4', { key: 'C', track: 'major', string: 5, fret: 7, dir: 1 });
+    expect(orn.map((o) => o.role)).toEqual(['neighbor', 'early', 'approach']);
+    expect(orn[1].fret).toBe(7); // the early target itself
+  });
+
+  it('builds timelines with targets on the beat and right-aligned pickups', () => {
+    const targets = scaleTargetsOnString('C', 'major', 5).slice(0, 2);
+    const { ticks, perBeat } = buildTimeline(targets, 'enc3', { key: 'C', track: 'major', dir: 1 });
+    expect(perBeat).toBe(3);
+    expect(ticks[0]).toBeNull(); // count-in click
+    expect(ticks[1].role).toBe('neighbor'); // pickups into the first target
+    expect(ticks[2].role).toBe('approach');
+    expect(ticks[3].role).toBe('target'); // beat 1 target
+    expect(ticks[6].role).toBe('target'); // beat 2 target
+  });
+
+  it('CAGED arpeggio targets are chord tones of the key chord', () => {
+    const tones = getDiatonicTriads('C')[0];
+    const targets = cagedArpTargets('C', 'E', tones);
+    expect(targets.length).toBeGreaterThan(0);
+    const chordPcs = new Set([tones.rootC, tones.thirdC, tones.fifthC]);
+    for (const t of targets) {
+      expect(chordPcs.has(pcAt(t.string, t.fret)), `pc at ${t.string}:${t.fret}`).toBe(true);
+      expect(['R', '3', '5']).toContain(t.role);
     }
   });
 });

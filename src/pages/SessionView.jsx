@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAppState } from '../state/AppState.jsx';
-import { SCHEDULE } from '../data/schedule.js';
-import { SCHEDULE_HARM_MINOR } from '../data/scheduleHarmMinor.js';
+import { getSchedule } from '../data/scheduleMerged.js';
 import { useSession, getSession, sessionStore, readSessionDraft, timerNow, fmtMs } from '../state/sessionStore.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
 import { playChime } from '../audio/engine.js';
@@ -9,9 +8,7 @@ import { drone } from '../audio/voices.js';
 import { noteToChromatic, normalizeKey } from '../data/notes.js';
 import { openMetronomeSheet } from '../components/metronome/metroShared.js';
 
-function scheduleFor(track) {
-  return track === 'major' ? SCHEDULE : SCHEDULE_HARM_MINOR;
-}
+const scheduleFor = getSchedule;
 
 export default function SessionView({ dayIdx, onClose }) {
   const { track, week, currentKey, weekTasks, toggleTask } = useAppState();

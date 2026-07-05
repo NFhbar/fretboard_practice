@@ -1,7 +1,8 @@
 import { useAppState } from '../../state/AppState.jsx';
 
 const TOOLS = [
-  { id: 'explorer', title: 'Fretboard Explorer', tag: 'New', desc: 'Layered full-neck map — scale, chord tones, intervals, CAGED positions. Tap any note to hear it.' },
+  { id: 'explorer', title: 'Fretboard Explorer', desc: 'Layered full-neck map — scale, chord tones, intervals, CAGED positions. Tap any note to hear it.' },
+  { id: 'chromatic', title: 'Chromaticism Lab', tag: 'New', desc: 'Approach notes, neighbors and bebop enclosures — see each cell on the neck and hear it land on the beat.' },
   { id: 'caged', title: 'CAGED Library', desc: '12 chord qualities × 5 shapes — chords, arpeggios, pentatonics, scales.' },
   { id: 'triads', title: 'Diatonic Triads', desc: 'All 7 triads of the key on the full neck, with chord-cycling backing player.' },
   { id: 'sevenths', title: 'Diatonic 7ths', desc: 'The 7th-chord layer — maj7, m7, dom7, m7♭5 across the neck.' },

@@ -3,8 +3,7 @@ import { useAppState } from '../state/AppState.jsx';
 import { KEY_CYCLE } from '../data/notes.js';
 import { SCALES, HARM_MINOR_SCALES, DIATONIC, HARM_MINOR_DIATONIC } from '../data/scales.js';
 import { MASTERY_ITEMS } from '../data/mastery.js';
-import { SCHEDULE } from '../data/schedule.js';
-import { SCHEDULE_HARM_MINOR } from '../data/scheduleHarmMinor.js';
+import { getSchedule } from '../data/scheduleMerged.js';
 
 function todayDayIdx() {
   const d = new Date().getDay(); // 0 Sun .. 6 Sat
@@ -19,7 +18,7 @@ export default function PracticeHome({ onNavigate }) {
   const [selectedDay, setSelectedDay] = useState(todayDayIdx);
   const [openBlocks, setOpenBlocks] = useState({});
 
-  const activeSchedule = track === 'major' ? SCHEDULE : SCHEDULE_HARM_MINOR;
+  const activeSchedule = getSchedule(track);
   const day = activeSchedule[selectedDay];
 
   const toggleBlock = (id) => setOpenBlocks((p) => ({ ...p, [id]: !p[id] }));

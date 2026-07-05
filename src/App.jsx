@@ -12,6 +12,7 @@ import DrillsView from './pages/DrillsView.jsx';
 import ProgressView from './pages/ProgressView.jsx';
 import ToolsIndex from './pages/tools/ToolsIndex.jsx';
 import ExplorerView from './pages/tools/ExplorerView.jsx';
+import ChromaticLab from './pages/tools/ChromaticLab.jsx';
 import CagedLibrary from './pages/tools/CagedLibrary.jsx';
 import DiatonicTriads from './pages/tools/DiatonicTriads.jsx';
 import Diatonic7ths from './pages/tools/Diatonic7ths.jsx';
@@ -22,6 +23,7 @@ import CofView from './pages/tools/CofView.jsx';
 
 const TOOL_ROUTES = {
   explorer: ExplorerView,
+  chromatic: ChromaticLab,
   caged: CagedLibrary,
   triads: DiatonicTriads,
   sevenths: Diatonic7ths,

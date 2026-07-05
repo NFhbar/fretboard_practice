@@ -670,6 +670,14 @@ input, select { font-family: var(--font-mono); }
 .history-row:last-child { border-bottom: none; }
 .empty-note { padding: 24px 16px; text-align: center; color: var(--text-faint); font-size: 13.5px; font-style: italic; }
 
+/* ───────────────── Chromaticism Lab ───────────────── */
+.chr-hint { font-size: 12.5px; color: var(--text-faint); font-style: italic; }
+.chr-legend { display: flex; gap: 16px; padding: 6px 16px 14px; flex-wrap: wrap; align-items: center; }
+@media (min-width: 640px) { .chr-legend { padding: 6px 32px 16px; } }
+.chr-legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-dim); }
+.chr-legend-item i { width: 13px; height: 13px; border-radius: 50%; display: inline-block; }
+.chr-legend-tip { color: var(--text-faint); font-style: italic; }
+
 /* ───────────────── Session mini-bar (minimized session) ───────────────── */
 .session-minibar {
   position: fixed; left: 12px; right: 84px; z-index: 140;

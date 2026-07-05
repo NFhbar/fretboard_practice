@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSession, getSession, sessionStore, timerNow, fmtMs } from '../state/sessionStore.js';
-import { SCHEDULE } from '../data/schedule.js';
-import { SCHEDULE_HARM_MINOR } from '../data/scheduleHarmMinor.js';
+import { getSchedule } from '../data/scheduleMerged.js';
 import { playChime } from '../audio/engine.js';
 
 function remainingFor(a, block) {
@@ -20,7 +19,7 @@ export default function SessionMiniBar({ onOpen }) {
     const iv = setInterval(() => {
       const a = getSession();
       if (a) {
-        const d = (a.track === 'major' ? SCHEDULE : SCHEDULE_HARM_MINOR)[a.dayIdx];
+        const d = getSchedule(a.track)[a.dayIdx];
         if (!a.chimed && remainingFor(a, d.blocks[a.blockIdx]) < 0) {
           playChime();
           sessionStore.markChimed();
@@ -33,7 +32,7 @@ export default function SessionMiniBar({ onOpen }) {
 
   if (!active) return null;
 
-  const day = (active.track === 'major' ? SCHEDULE : SCHEDULE_HARM_MINOR)[active.dayIdx];
+  const day = getSchedule(active.track)[active.dayIdx];
   const block = day.blocks[active.blockIdx];
   const { isPaused } = timerNow(active);
   const remainingMs = remainingFor(active, block);
