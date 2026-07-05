@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
-import { fretNote } from '../../data/notes.js';
+import { fretNote, noteToChromatic, normalizeKey } from '../../data/notes.js';
 import { CAGED_NAMES } from '../../data/cagedMeta.js';
+import { TRIAD_COLORS } from '../../data/colors.js';
 import { getTriadsFor, getSeventhsFor } from '../../theory/diatonic.js';
 import { buildCagedBands } from '../../theory/noteMap.js';
 import {
@@ -13,6 +14,7 @@ import {
   ornamentsFor,
   buildTimeline,
   midiOf,
+  pcAt,
 } from '../../theory/chromatic.js';
 import { metronome } from '../../audio/metronome.js';
 import { getContext } from '../../audio/engine.js';
@@ -20,14 +22,17 @@ import { playNote } from '../../audio/voices.js';
 import { findSub, clampBpm, applyClickVolume, useMetronomeConfig, openMetronomeSheet } from '../../components/metronome/metroShared.js';
 import ToolView from '../../components/ui/ToolView.jsx';
 import Fretboard from '../../components/Fretboard/Fretboard.jsx';
+import FretRangeChips from '../../components/Fretboard/FretRangeChips.jsx';
 import BoardThemePicker from '../../components/Fretboard/BoardThemePicker.jsx';
 import Segmented from '../../components/ui/Segmented.jsx';
 
-const ROLE_COLORS = { target: '#c9963a', approach: '#c75454', neighbor: '#5b8abd', early: '#e8b25c' };
-const ROLE_NAMES = { approach: 'chromatic approach', neighbor: 'diatonic neighbor', early: 'early target (off-beat)' };
+// approach = chromatic tension (red), neighbor = diatonic color (green — outside the
+// degree palette so it never collides with TRIAD_COLORS), early target = hollow gold
+const ROLE_COLORS = { approach: '#c75454', neighbor: '#6aaa5a', early: '#e8b25c' };
+const SCALE_NOTE_COLOR = '#8a8480'; // same convention as the Explorer's scale layer
 
 export default function ChromaticLab({ onClose }) {
-  const { currentKey, track, settings } = useAppState();
+  const { currentKey, track, settings, updateSettings } = useAppState();
   const [cfg, setCfg] = useMetronomeConfig();
   const [device, setDevice] = useState('approach');
   const [formula, setFormula] = useState('below2');
@@ -39,15 +44,21 @@ export default function ChromaticLab({ onClose }) {
   const [degree, setDegree] = useState(0);
   const [roles, setRoles] = useState(['R', '3', '5', '7']);
   const [dir, setDir] = useState(1);
+  const [range, setRange] = useState([0, 24]);
+  const soundOn = settings.labSound !== false;
+  const setSoundOn = (fn) => updateSettings({ labSound: typeof fn === 'function' ? fn(soundOn) : fn });
   const [playing, setPlaying] = useState(false);
   const [curTick, setCurTick] = useState(null);
   const [selected, setSelected] = useState(null); // tapped target index while stopped
   const rafRef = useRef(null);
   const pendingUi = useRef([]);
   const timelineRef = useRef(null);
+  const soundOnRef = useRef(soundOn);
+  soundOnRef.current = soundOn;
 
   const chordItems = use7th ? getSeventhsFor(track, currentKey) : getTriadsFor(track, currentKey);
   const tones = chordItems[context === 'diatonic' ? degree : 0];
+  const keyRootPc = noteToChromatic(normalizeKey(currentKey));
 
   // one CAGED position window (the lowest full box for this key/shape)
   const cagedWindow = useMemo(() => {
@@ -56,17 +67,19 @@ export default function ChromaticLab({ onClose }) {
     const span = Math.max(...bands.map((b) => b.maxFret - b.minFret));
     const full = bands.filter((b) => b.maxFret - b.minFret === span && b.minFret >= 1);
     const band = (full.length ? full : bands).sort((a, b) => a.minFret - b.minFret)[0];
-    return band ? [band.minFret - 1, band.maxFret + 1] : null;
+    return band ? [band.minFret, band.maxFret] : null;
   }, [context, currentKey, shape]);
 
   const targets = useMemo(() => {
     const roleFilter = roles.length ? roles : null;
-    if (context === 'string') return scaleTargetsOnString(currentKey, track, string);
+    const minFret = Math.max(1, range[0]);
+    const maxFret = Math.min(range[1], 23); // keep the above-approach on the neck
+    if (context === 'string') return scaleTargetsOnString(currentKey, track, string, { minFret, maxFret });
     if (context === 'caged') {
-      return cagedArpTargets(currentKey, shape, tones, { targetRoles: roleFilter, window: cagedWindow ? [cagedWindow[0] + 1, cagedWindow[1] - 1] : null });
+      return cagedArpTargets(currentKey, shape, tones, { targetRoles: roleFilter, window: cagedWindow });
     }
-    return fullNeckArpTargets(currentKey, track, tones, { targetRoles: roleFilter });
-  }, [context, currentKey, track, string, shape, tones, roles, cagedWindow]);
+    return fullNeckArpTargets(currentKey, track, tones, { minFret, maxFret, targetRoles: roleFilter });
+  }, [context, currentKey, track, string, shape, tones, roles, cagedWindow, range]);
 
   const cellOpts = useMemo(
     () => ({ key: currentKey, track, dir, formula, variant: side === 'auto' ? null : side }),
@@ -88,7 +101,7 @@ export default function ChromaticLab({ onClose }) {
     if (playing) stop();
     setSelected(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [device, formula, side, context, string, shape, use7th, degree, roles, dir, currentKey, track]);
+  }, [device, formula, side, context, string, shape, use7th, degree, roles, dir, range, currentKey, track]);
 
   const subdivisionIdFor = () => {
     if (device === 'bebop') return BEBOP_FORMULAS.find((f) => f.id === formula)?.subdivision ?? 'triplet';
@@ -123,7 +136,7 @@ export default function ChromaticLab({ onClose }) {
         const globalTick = (ev.bar * 4 + (ev.beat - 1)) * tl.perBeat + ev.sub;
         const idx = globalTick % tl.ticks.length;
         const note = tl.ticks[idx];
-        if (note) {
+        if (note && soundOnRef.current) {
           playNote(midiOf(note), {
             when: ev.time,
             velocity: note.role === 'target' ? 1 : 0.7,
@@ -150,13 +163,13 @@ export default function ChromaticLab({ onClose }) {
   // quick one-shot preview of a tapped target's cell
   const previewCell = useCallback(
     (targetIdx) => {
+      if (!soundOnRef.current) return;
       const t = targets[targetIdx];
       if (!t) return;
       const orn = ornamentsFor(device, { ...cellOpts, string: t.string, fret: t.fret });
       const seq = [...orn, { ...t, role: 'target' }];
-      const perBeat = seq.length;
       const c = getContext();
-      const step = 60 / cfg.bpm / perBeat;
+      const step = 60 / cfg.bpm / seq.length;
       seq.forEach((n, i) => {
         playNote(midiOf(n), {
           when: c.currentTime + 0.05 + i * step,
@@ -168,6 +181,14 @@ export default function ChromaticLab({ onClose }) {
     [targets, device, cellOpts, cfg.bpm]
   );
 
+  // target colors follow the other tools: scale-note convention on strings
+  // (root gold, others gray), TRIAD_COLORS degree colors for arpeggios
+  const targetColor = (t) => {
+    if (context === 'string') return pcAt(t.string, t.fret) === keyRootPc ? TRIAD_COLORS[0] : SCALE_NOTE_COLOR;
+    if (context === 'diatonic') return TRIAD_COLORS[degree];
+    return TRIAD_COLORS[0]; // CAGED mode targets the key chord (degree I)
+  };
+
   // ---- markers ----
   const markers = useMemo(() => {
     const tl = playing ? timelineRef.current : null;
@@ -178,9 +199,10 @@ export default function ChromaticLab({ onClose }) {
       string: t.string,
       fret: t.fret,
       label: context === 'string' ? fretNote(6 - t.string, t.fret) : t.role,
-      color: ROLE_COLORS.target,
-      isRoot: true,
+      color: targetColor(t),
+      isRoot: context === 'string' ? pcAt(t.string, t.fret) === keyRootPc : true,
       state: focusIdx === null ? 'normal' : i === focusIdx ? 'active' : 'faded',
+      halo: !!(cur && cur.role === 'target' && cur.targetIdx === i),
       refIdx: i,
     }));
 
@@ -195,17 +217,13 @@ export default function ChromaticLab({ onClose }) {
           color: ROLE_COLORS[o.role],
           isRoot: o.role === 'early',
           state: 'active',
+          halo: !!(cur && cur.role !== 'target' && cur.string === o.string && cur.fret === o.fret && cur.role === o.role),
         });
       });
     }
     return out;
-  }, [targets, playing, curTick, selected, device, cellOpts, context]);
-
-  const fretRange = useMemo(() => {
-    if (context === 'caged' && cagedWindow) return [Math.max(0, cagedWindow[0] - 1), Math.min(24, cagedWindow[1] + 2)];
-    if (context === 'string') return [0, 13];
-    return [0, 13];
-  }, [context, cagedWindow]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targets, playing, curTick, selected, device, cellOpts, context, degree, keyRootPc]);
 
   const devMeta = DEVICES.find((d) => d.id === device);
 
@@ -214,7 +232,6 @@ export default function ChromaticLab({ onClose }) {
       title="Chromaticism Lab"
       badge={`${currentKey} ${track === 'major' ? 'Major' : 'Harm. Minor'}`}
       onClose={onClose}
-      controls={<BoardThemePicker />}
     >
       <div className="explorer-controls">
         <div className="explorer-row">
@@ -274,7 +291,13 @@ export default function ChromaticLab({ onClose }) {
                   </button>
                 ))
               : chordItems.map((c, i) => (
-                  <button key={i} className={`chip ${degree === i ? 'on' : ''}`} aria-pressed={degree === i} onClick={() => setDegree(i)}>
+                  <button
+                    key={i}
+                    className={`chip ${degree === i ? 'on' : ''}`}
+                    aria-pressed={degree === i}
+                    style={degree === i ? { borderColor: TRIAD_COLORS[i], color: TRIAD_COLORS[i], background: TRIAD_COLORS[i] + '18' } : {}}
+                    onClick={() => setDegree(i)}
+                  >
                     {c.roman}
                   </button>
                 ))}
@@ -309,15 +332,27 @@ export default function ChromaticLab({ onClose }) {
           ) : (
             <button className="player-btn stop" onClick={stop}>■ Stop</button>
           )}
+          <button
+            className={`player-btn ${soundOn ? 'active' : ''}`}
+            aria-pressed={soundOn}
+            title="Toggle note playback — off leaves the click and the visual highlight"
+            onClick={() => setSoundOn((s) => !s)}
+          >
+            ♪ Sound {soundOn ? 'ON' : 'OFF'}
+          </button>
           <button className="player-btn" onClick={openMetronomeSheet}>◔ {findSub(subdivisionIdFor()).label} · accents</button>
           <span className="chr-hint">{devMeta.name} — target on the beat, middle finger</span>
         </div>
       </div>
 
       <div className="fretboard-pane">
+        <div className="fb-toolbar">
+          <FretRangeChips value={range} onChange={setRange} />
+          <BoardThemePicker />
+        </div>
         <Fretboard
           markers={markers}
-          fretRange={fretRange}
+          fretRange={range}
           lefty={settings.lefty}
           theme={settings.boardTheme}
           onMarkerClick={(m) => {
@@ -327,11 +362,11 @@ export default function ChromaticLab({ onClose }) {
           }}
         />
         <div className="chr-legend">
-          <span className="chr-legend-item"><i style={{ background: ROLE_COLORS.target }} /> target (on the beat)</span>
-          <span className="chr-legend-item"><i style={{ background: ROLE_COLORS.approach }} /> {ROLE_NAMES.approach}</span>
-          <span className="chr-legend-item"><i style={{ background: ROLE_COLORS.neighbor }} /> {ROLE_NAMES.neighbor}</span>
-          {device === 'enc4' && <span className="chr-legend-item"><i style={{ background: ROLE_COLORS.early }} /> {ROLE_NAMES.early}</span>}
-          <span className="chr-legend-item chr-legend-tip">tap a target to hear its cell · numbers show pickup order</span>
+          <span className="chr-legend-item"><i style={{ background: TRIAD_COLORS[0] }} /> target (on the beat)</span>
+          <span className="chr-legend-item"><i style={{ background: ROLE_COLORS.approach }} /> chromatic approach</span>
+          <span className="chr-legend-item"><i style={{ background: ROLE_COLORS.neighbor }} /> diatonic neighbor</span>
+          {device === 'enc4' && <span className="chr-legend-item"><i style={{ background: ROLE_COLORS.early }} /> early target (off-beat)</span>}
+          <span className="chr-legend-item chr-legend-tip">ring = note sounding now · tap a target to hear its cell · numbers show pickup order</span>
         </div>
       </div>
     </ToolView>

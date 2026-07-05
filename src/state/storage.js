@@ -21,6 +21,7 @@ export const DEFAULTS = {
     labelMode: 'intervals',
     boardTheme: 'dark',
     loopChords: true,
+    labSound: true,
   },
   [KEYS.week]: 1,
   [KEYS.metronome]: {

@@ -157,6 +157,12 @@ function HorizontalBoard({
           const opacity = m.state === 'normal' ? 0.88 : 1;
           return (
             <g key={`m${i}`} opacity={opacity} onClick={clickable ? handle : undefined} style={clickable ? { cursor: 'pointer' } : undefined}>
+              {m.halo && (
+                <>
+                  <circle cx={cx} cy={cy} r={L.dotR + 10} fill={m.color} opacity={0.18} />
+                  <circle cx={cx} cy={cy} r={L.dotR + 7} fill="none" stroke={m.color} strokeWidth={3} />
+                </>
+              )}
               <circle
                 cx={cx} cy={cy} r={L.dotR}
                 fill={m.isRoot ? m.color : T.dotBg}
