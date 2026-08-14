@@ -350,6 +350,7 @@ input, select { font-family: var(--font-mono); }
 .modes-table td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--surface-3); }
 .modes-table tr:hover { background: var(--surface-2); }
 .modes-table .mode-name { font-family: var(--font-serif); font-size: 17px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.modes-table .mode-parent { font-family: var(--font-mono); font-size: 13px; font-weight: 400; color: var(--text-dim); margin-top: 3px; }
 .modes-table .mode-current { background: var(--gold-tint); }
 .modes-chord { display: inline-block; padding: 5px 11px; border-radius: 4px; margin: 2px; font-size: 14px; font-weight: 500; cursor: pointer; }
 .modes-chord.q-maj, .modes-chord.q-maj7 { background: var(--q-maj-bg); color: var(--q-maj-fg); }

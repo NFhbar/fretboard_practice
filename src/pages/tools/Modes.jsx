@@ -53,7 +53,12 @@ export default function Modes({ onClose }) {
               const parentC = (rootC - modeOffsets[mi] + 12) % 12;
               return (
                 <tr key={mode.name} className={mi === 0 ? 'mode-current' : ''}>
-                  <td className="mode-name">{mode.name}</td>
+                  <td className="mode-name">
+                    {mode.name}
+                    <div className="mode-parent">
+                      = {noteSet[parentC]} {isMajor ? 'major' : 'harm. minor'} · {modeOffsets[mi] ? `−${modeOffsets[mi]}` : '0'}
+                    </div>
+                  </td>
                   {mode.chords.map((c, ci) => {
                     const chordRootC = noteToChromatic(c.root);
                     const degreeInParent = modeOffsets.indexOf((chordRootC - parentC + 12) % 12);
