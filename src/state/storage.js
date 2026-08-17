@@ -9,6 +9,7 @@ export const KEYS = {
   completedWeeks: 'fp.completedWeeks',
   history: 'fp.history',
   drillLog: 'fp.drillLog',
+  songbook: 'fp.songbook',
   sessionDraft: 'fp.sessionDraft',
   metronome: 'fp.metronome',
 };
@@ -22,6 +23,9 @@ export const DEFAULTS = {
     boardTheme: 'dark',
     loopChords: true,
     labSound: true,
+    songClick: true,
+    songChords: true,
+    songNotes: true,
   },
   [KEYS.week]: 1,
   [KEYS.metronome]: {
@@ -37,6 +41,7 @@ export const DEFAULTS = {
   [KEYS.completedWeeks]: [],
   [KEYS.history]: [],
   [KEYS.drillLog]: [],
+  [KEYS.songbook]: {},
   [KEYS.sessionDraft]: null,
 };
 

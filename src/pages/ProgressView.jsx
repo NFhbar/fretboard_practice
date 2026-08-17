@@ -89,7 +89,7 @@ export default function ProgressView() {
       <div className="card" style={{ padding: 16, marginBottom: 20 }}>
         <div className="section-label">Minutes per week — last 8 weeks</div>
         {bars.every((b) => b === 0) ? (
-          <div className="empty-note">No sessions yet — start one from the Practice tab.</div>
+          <div className="empty-note">No sessions yet — start one from Practice or Songbook.</div>
         ) : (
           <div className="bars-row">
             {bars.map((m, i) => (
@@ -155,8 +155,10 @@ export default function ProgressView() {
             <div key={h.id} className="history-row">
               <span style={{ color: h.completed ? 'var(--green-bright)' : 'var(--text-faint)' }}>{h.completed ? '✓' : '◐'}</span>
               <span style={{ color: 'var(--text-dim)' }}>{new Date(h.ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-              <span style={{ flex: 1 }}>{h.day} — {h.focus}</span>
-              <span className="badge-gold">{h.key}</span>
+              <span style={{ flex: 1 }}>
+                {h.curriculum === 'songbook' ? `${h.songTitle} · ${h.day} — ${h.focus}` : `${h.day} — ${h.focus}`}
+              </span>
+              <span className="badge-gold">{h.curriculum === 'songbook' ? 'Song' : h.key}</span>
               <span style={{ color: 'var(--text-faint)' }}>{Math.round(h.actualSec / 60)}m</span>
             </div>
           ))

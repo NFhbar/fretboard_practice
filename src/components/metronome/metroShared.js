@@ -15,6 +15,7 @@ export const SIGS = [
 export const SUBS = [
   { id: 'quarter', label: '♩', name: 'Quarter notes', sub: 1 },
   { id: 'eighth', label: '♪♪', name: 'Eighth notes', sub: 2 },
+  { id: 'swing-eighth', label: '♪³', name: 'Swing eighths', sub: [0, 2 / 3] },
   { id: 'dotted8-16', label: '♪·♬', name: 'Dotted 8th + 16th', sub: [0, 0.75] },
   { id: 'triplet', label: '³', name: 'Triplets', sub: 3 },
   { id: 'sixteenth', label: '♬♬', name: 'Sixteenth notes', sub: 4 },

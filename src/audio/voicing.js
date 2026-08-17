@@ -28,3 +28,13 @@ export function voiceChord({ rootC, thirdC, fifthC, seventhC }) {
   }
   return notes;
 }
+
+export function voiceIntervals(rootC, intervals, { maxVoices = 5 } = {}) {
+  let selected = [...intervals];
+  if (selected.length > maxVoices && selected.includes(7)) {
+    selected = selected.filter((interval) => interval !== 7);
+  }
+  selected = selected.slice(0, maxVoices);
+  const rootMidi = 40 + ((rootC - 4 + 12) % 12);
+  return selected.map((interval) => rootMidi + interval);
+}

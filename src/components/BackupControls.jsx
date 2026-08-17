@@ -8,11 +8,13 @@ function summarize(payload) {
   const drills = d['fp.drillLog'];
   const mastery = d['fp.mastery'];
   const weeks = d['fp.completedWeeks'];
+  const songbook = d['fp.songbook'];
   if (d['fp.week']) parts.push(`week ${d['fp.week']}`);
   if (Array.isArray(history)) parts.push(`${history.length} session${history.length === 1 ? '' : 's'}`);
   if (Array.isArray(drills)) parts.push(`${drills.length} drill answers`);
   if (mastery) parts.push(`mastery for ${Object.keys(mastery).length} key${Object.keys(mastery).length === 1 ? '' : 's'}`);
   if (Array.isArray(weeks) && weeks.length) parts.push(`${weeks.length} completed week${weeks.length === 1 ? '' : 's'}`);
+  if (songbook && Object.keys(songbook).length) parts.push(`${Object.keys(songbook).length} songbook entr${Object.keys(songbook).length === 1 ? 'y' : 'ies'}`);
   const when = payload.exportedAt ? new Date(payload.exportedAt).toLocaleString() : 'unknown date';
   return { when, summary: parts.length ? parts.join(' · ') : 'settings only' };
 }
@@ -74,7 +76,7 @@ export default function BackupControls() {
         />
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginTop: 10, lineHeight: 1.5 }}>
-        Export downloads a JSON file with your tasks, sessions, drills, mastery and settings.
+        Export downloads a JSON file with your tasks, sessions, drills, mastery, songbook progress and settings.
         Import replaces everything on this device with the file's contents.
       </div>
       {error && (

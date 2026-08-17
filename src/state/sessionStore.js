@@ -38,13 +38,15 @@ export function readSessionDraft() {
 }
 
 export const sessionStore = {
-  start({ dayIdx, week, key, track }) {
+  start({ dayIdx, week, key, track, curriculum = 'weekly', songId = null }) {
     if (active) return;
     active = {
       dayIdx,
       week,
       key,
       track,
+      curriculum,
+      songId,
       blockIdx: 0,
       timer: freshTimer(),
       blockLog: [],
@@ -65,6 +67,8 @@ export const sessionStore = {
       ...draft,
       // drafts from the pre-store version have no key field
       key: draft.key ?? KEY_CYCLE[(draft.week - 1) % KEY_CYCLE.length],
+      curriculum: draft.curriculum || 'weekly',
+      songId: draft.songId || null,
       timer,
       chimed: false,
     };

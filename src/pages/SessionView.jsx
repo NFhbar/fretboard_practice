@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppState } from '../state/AppState.jsx';
-import { getSchedule } from '../data/scheduleMerged.js';
+import { resolveSessionDay } from '../data/curriculumRegistry.js';
 import { useSession, getSession, sessionStore, readSessionDraft, timerNow, fmtMs } from '../state/sessionStore.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
 import { playChime } from '../audio/engine.js';
@@ -8,21 +8,38 @@ import { drone } from '../audio/voices.js';
 import { noteToChromatic, normalizeKey } from '../data/notes.js';
 import { openMetronomeSheet } from '../components/metronome/metroShared.js';
 
-const scheduleFor = getSchedule;
-
-export default function SessionView({ dayIdx, onClose }) {
-  const { track, week, currentKey, weekTasks, toggleTask } = useAppState();
+export default function SessionView({ dayIdx, curriculum = 'weekly', songId = null, onClose, onOpenActivity }) {
+  const {
+    track,
+    week,
+    currentKey,
+    tasks,
+    toggleTaskForWeek,
+    songbook,
+    toggleSongTask,
+  } = useAppState();
   const active = useSession();
   const [summary, setSummary] = useState(null);
   const [draft, setDraft] = useState(() => (getSession() ? null : readSessionDraft()));
   const [, forceRender] = useState(0);
+  const requested = useMemo(
+    () => resolveSessionDay({ curriculum, songId, dayIdx, track, week, key: currentKey }),
+    [curriculum, songId, dayIdx, track, week, currentKey]
+  );
 
   // no active session and no draft to ask about -> start immediately
   useEffect(() => {
-    if (!active && !draft && !summary) {
-      sessionStore.start({ dayIdx, week, key: currentKey, track });
+    if (!active && !draft && !summary && requested) {
+      sessionStore.start({
+        dayIdx: requested.dayIdx,
+        week,
+        key: requested.key || currentKey,
+        track,
+        curriculum,
+        songId,
+      });
     }
-  }, [active, draft, summary, dayIdx, week, currentKey, track]);
+  }, [active, draft, summary, requested, week, currentKey, track, curriculum, songId]);
 
   useWakeLock(!!active);
 
@@ -38,8 +55,22 @@ export default function SessionView({ dayIdx, onClose }) {
     };
   }, [active]);
 
-  const day = active ? scheduleFor(active.track)[active.dayIdx] : scheduleFor(track)[Math.min(dayIdx, 5)];
+  const resolved = useMemo(() => (active ? resolveSessionDay(active) : requested), [active, requested]);
+  const day = resolved?.day;
   const block = active ? day.blocks[active.blockIdx] : null;
+  const sessionTasks = useMemo(
+    () => active
+      ? active.curriculum === 'songbook'
+        ? songbook[active.songId]?.tasks || {}
+        : tasks[active.week] || {}
+      : {},
+    [active, songbook, tasks]
+  );
+  const toggleSessionTask = (taskId) => {
+    if (!active) return;
+    if (active.curriculum === 'songbook') toggleSongTask(active.songId, taskId);
+    else toggleTaskForWeek(active.week, taskId);
+  };
 
   const { elapsedMs, isPaused } = active ? timerNow(active) : { elapsedMs: 0, isPaused: false };
   const plannedMs = block ? block.min * 60_000 + active.timer.extraMs : 0;
@@ -58,11 +89,11 @@ export default function SessionView({ dayIdx, onClose }) {
       title: block.title,
       plannedMin: block.min,
       actualSec: Math.max(0, Math.round(timerNow(active).elapsedMs / 1000)),
-      tasksDone: block.tasks.filter((t) => weekTasks[t.id]).length,
+      tasksDone: block.tasks.filter((t) => sessionTasks[t.id]).length,
       tasksTotal: block.tasks.length,
       skipped,
     }),
-    [block, active, weekTasks]
+    [block, active, sessionTasks]
   );
 
   const buildRecord = useCallback(
@@ -72,6 +103,9 @@ export default function SessionView({ dayIdx, onClose }) {
       week: active.week,
       key: active.key,
       track: active.track,
+      curriculum: active.curriculum || 'weekly',
+      songId: active.songId || null,
+      songTitle: active.curriculum === 'songbook' ? resolved.title : null,
       dayIdx: active.dayIdx,
       day: day.day,
       focus: day.focus,
@@ -80,7 +114,7 @@ export default function SessionView({ dayIdx, onClose }) {
       blocks: log,
       completed,
     }),
-    [active, day]
+    [active, day, resolved]
   );
 
   const advance = useCallback(
@@ -108,13 +142,35 @@ export default function SessionView({ dayIdx, onClose }) {
 
   // ---------- resume prompt ----------
   if (!active && draft && !summary) {
-    const dDay = scheduleFor(draft.track)[draft.dayIdx];
+    const draftResolved = resolveSessionDay(draft);
+    if (!draftResolved) {
+      return (
+        <div className="session-screen">
+          <div className="session-summary">
+            <div className="session-summary-title">Session unavailable</div>
+            <button
+              className="session-ctl primary"
+              onClick={() => {
+                sessionStore.discardDraft();
+                setDraft(null);
+              }}
+            >
+              Discard session
+            </button>
+          </div>
+        </div>
+      );
+    }
+    const dDay = draftResolved.day;
+    const draftLabel = draft.curriculum === 'songbook'
+      ? `${draftResolved.title} · ${draft.key}`
+      : `${draft.key} ${draft.track === 'major' ? 'Major' : 'Harm. Minor'}`;
     return (
       <div className="session-screen">
         <div className="session-summary">
           <div className="session-summary-title">Resume session?</div>
           <div className="session-summary-sub">
-            Unfinished {dDay.day} session ({draft.key} {draft.track === 'major' ? 'Major' : 'Harm. Minor'}) — block {draft.blockIdx + 1} of {dDay.blocks.length}.
+            Unfinished {dDay.day} session ({draftLabel}) — block {draft.blockIdx + 1} of {dDay.blocks.length}.
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
@@ -135,7 +191,7 @@ export default function SessionView({ dayIdx, onClose }) {
             >
               Restart day
             </button>
-            <button className="session-ctl danger" onClick={onClose}>Cancel</button>
+            <button className="session-ctl danger" onClick={() => onClose({ curriculum, songId })}>Cancel</button>
           </div>
         </div>
       </div>
@@ -152,7 +208,9 @@ export default function SessionView({ dayIdx, onClose }) {
         <div className="session-summary">
           <div className="session-summary-title">Session complete</div>
           <div className="session-summary-sub">
-            {summary.day} — {summary.focus} · {summary.key} {summary.track === 'major' ? 'Major' : 'Harm. Minor'}
+            {summary.day} — {summary.focus} · {summary.curriculum === 'songbook'
+              ? summary.songTitle
+              : `${summary.key} ${summary.track === 'major' ? 'Major' : 'Harm. Minor'}`}
           </div>
           <div className="session-stat-row">
             <div className="session-stat">
@@ -177,7 +235,7 @@ export default function SessionView({ dayIdx, onClose }) {
             </div>
           ))}
           <div style={{ marginTop: 20 }}>
-            <button className="session-ctl primary" onClick={onClose}>Done</button>
+            <button className="session-ctl primary" onClick={() => onClose(summary)}>Done</button>
           </div>
         </div>
       </div>
@@ -192,7 +250,7 @@ export default function SessionView({ dayIdx, onClose }) {
   return (
     <div className="session-screen">
       <div className="session-top">
-        <button className="session-minimize" onClick={onClose} title="Minimize — session keeps running while you use the tools">
+        <button className="session-minimize" onClick={() => onClose(active)} title="Minimize — session keeps running while you use the tools">
           ⌄
         </button>
         <span className="session-block-count">Block {active.blockIdx + 1}/{day.blocks.length}</span>
@@ -232,13 +290,24 @@ export default function SessionView({ dayIdx, onClose }) {
 
       <div className="session-tasks">
         {block.tasks.map((task) => (
-          <button key={task.id} className={`task ${weekTasks[task.id] ? 'done' : ''}`} onClick={() => toggleTask(task.id)}>
-            <div className={`task-check ${weekTasks[task.id] ? 'done' : ''}`}>{weekTasks[task.id] ? '✓' : ''}</div>
-            <div>
-              <div className="task-label">{task.label}</div>
-              {task.note && <div className="task-note">{task.note}</div>}
-            </div>
-          </button>
+          <div className="song-task-row" key={task.id}>
+            <button
+              className={`task ${sessionTasks[task.id] ? 'done' : ''}`}
+              aria-pressed={!!sessionTasks[task.id]}
+              onClick={() => toggleSessionTask(task.id)}
+            >
+              <div className={`task-check ${sessionTasks[task.id] ? 'done' : ''}`}>{sessionTasks[task.id] ? '✓' : ''}</div>
+              <div>
+                <div className="task-label">{task.label}</div>
+                {task.note && <div className="task-note">{task.note}</div>}
+              </div>
+            </button>
+            {active.curriculum === 'songbook' && task.activity && onOpenActivity && (
+              <button className="song-task-open" onClick={() => onOpenActivity(active.songId, task.id)} aria-label={`Open ${task.label} in Song Lab`}>
+                Lab ↗
+              </button>
+            )}
+          </div>
         ))}
       </div>
 

@@ -16,6 +16,7 @@ const state = {
   accents: null, // null -> default: accent beat 1, normal elsewhere
   pending: null, // config change waiting for the next beat boundary
   onSchedule: null,
+  owner: null,
   nextTime: 0,
   tick: 0,
   timer: null,
@@ -106,7 +107,7 @@ function schedulerTick() {
 }
 
 export const metronome = {
-  start({ bpm = 80, beatsPerBar = 4, subdivision = 1, clickOnSub = false, accents = null, sound = 'tick', onSchedule = null } = {}) {
+  start({ bpm = 80, beatsPerBar = 4, subdivision = 1, clickOnSub = false, accents = null, sound = 'tick', onSchedule = null, owner = null } = {}) {
     metronome.stop();
     const c = ensureRunning();
     state.bpm = bpm;
@@ -118,6 +119,7 @@ export const metronome = {
     state.sound = sound;
     state.pending = null;
     state.onSchedule = onSchedule;
+    state.owner = owner;
     state.tick = 0;
     state.queue = [];
     state.lastBeat = null;
@@ -135,6 +137,7 @@ export const metronome = {
     state.queue = [];
     state.lastBeat = null;
     state.onSchedule = null;
+    state.owner = null;
   },
 
   setBpm(bpm) {
@@ -181,6 +184,7 @@ export const metronome = {
       clickOnSub: state.clickOnSub,
       accents: state.accents,
       sound: state.sound,
+      owner: state.owner,
     };
   },
 

@@ -15,6 +15,7 @@ export function AppStateProvider({ children }) {
   const [tasks, setTasks] = usePersistedState(KEYS.tasks, DEFAULTS[KEYS.tasks]);
   const [mastery, setMastery] = usePersistedState(KEYS.mastery, DEFAULTS[KEYS.mastery]);
   const [completedWeeks, setCompletedWeeks] = usePersistedState(KEYS.completedWeeks, DEFAULTS[KEYS.completedWeeks]);
+  const [songbook, setSongbook] = usePersistedState(KEYS.songbook, DEFAULTS[KEYS.songbook]);
 
   const track = settings.track;
   const currentKey = KEY_CYCLE[(week - 1) % KEY_CYCLE.length];
@@ -36,6 +37,16 @@ export function AppStateProvider({ children }) {
     [setTasks, week]
   );
 
+  const toggleTaskForWeek = useCallback(
+    (targetWeek, taskId) =>
+      setTasks((state) => {
+        const target = { ...(state[targetWeek] || {}) };
+        target[taskId] = !target[taskId];
+        return { ...state, [targetWeek]: target };
+      }),
+    [setTasks]
+  );
+
   const setTaskDone = useCallback(
     (taskId, done) =>
       setTasks((t) => ({ ...t, [week]: { ...(t[week] || {}), [taskId]: done } })),
@@ -45,6 +56,35 @@ export function AppStateProvider({ children }) {
   const resetWeekTasks = useCallback(
     () => setTasks((t) => ({ ...t, [week]: {} })),
     [setTasks, week]
+  );
+
+  const toggleSongTask = useCallback(
+    (songId, taskId) =>
+      setSongbook((state) => {
+        const song = state[songId] || {};
+        const songTasks = { ...(song.tasks || {}) };
+        songTasks[taskId] = !songTasks[taskId];
+        return { ...state, [songId]: { ...song, tasks: songTasks } };
+      }),
+    [setSongbook]
+  );
+
+  const resetSongTasks = useCallback(
+    (songId) =>
+      setSongbook((state) => ({
+        ...state,
+        [songId]: { ...(state[songId] || {}), tasks: {} },
+      })),
+    [setSongbook]
+  );
+
+  const updateSongbookSong = useCallback(
+    (songId, patch) =>
+      setSongbook((state) => ({
+        ...state,
+        [songId]: { ...(state[songId] || {}), ...patch },
+      })),
+    [setSongbook]
   );
 
   const toggleMastery = useCallback(
@@ -79,18 +119,23 @@ export function AppStateProvider({ children }) {
       tasks,
       weekTasks,
       toggleTask,
+      toggleTaskForWeek,
       setTaskDone,
       resetWeekTasks,
       mastery,
       toggleMastery,
       completedWeeks,
       completeWeek,
+      songbook,
+      toggleSongTask,
+      resetSongTasks,
+      updateSongbookSong,
       logHistory,
       logDrill,
       metroCfg,
       setMetroCfg,
     }),
-    [week, setWeek, track, settings, updateSettings, currentKey, nextKey, tasks, weekTasks, toggleTask, setTaskDone, resetWeekTasks, mastery, toggleMastery, completedWeeks, completeWeek, logHistory, logDrill, metroCfg, setMetroCfg]
+    [week, setWeek, track, settings, updateSettings, currentKey, nextKey, tasks, weekTasks, toggleTask, toggleTaskForWeek, setTaskDone, resetWeekTasks, mastery, toggleMastery, completedWeeks, completeWeek, songbook, toggleSongTask, resetSongTasks, updateSongbookSong, logHistory, logDrill, metroCfg, setMetroCfg]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

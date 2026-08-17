@@ -23,6 +23,20 @@ export const QUALITY_INTERVALS = {
   Maj: [0, 4, 7],
 };
 
+export const EXTENDED_QUALITY_INTERVALS = {
+  maj6: [0, 4, 7, 9],
+  min9: [0, 3, 7, 10, 14],
+  dom7b9: [0, 4, 7, 10, 13],
+};
+
+export function intervalsFromQuality(quality) {
+  return EXTENDED_QUALITY_INTERVALS[quality] || QUALITY_INTERVALS[quality] || QUALITY_INTERVALS.maj;
+}
+
+export function pitchClassesFromQuality(rootC, quality) {
+  return intervalsFromQuality(quality).map((interval) => (rootC + interval) % 12);
+}
+
 export function tonesFromQuality(rootC, quality) {
   const ivs = QUALITY_INTERVALS[quality] || QUALITY_INTERVALS.maj;
   const [r, t, f, s] = ivs.map((x) => (rootC + x) % 12);

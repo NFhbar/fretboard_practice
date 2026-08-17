@@ -6,6 +6,12 @@ const ICONS = {
       <path d="M7 21c0-4 2-6 5-6s5 2 5 6" />
     </svg>
   ),
+  songbook: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H12v17H7.5A3.5 3.5 0 0 0 4 22V5.5Z" />
+      <path d="M20 5.5A3.5 3.5 0 0 0 16.5 2H12v17h4.5A3.5 3.5 0 0 1 20 22V5.5Z" />
+    </svg>
+  ),
   drills: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
@@ -32,6 +38,7 @@ const ICONS = {
 
 const TABS = [
   { id: 'practice', label: 'Practice' },
+  { id: 'songbook', label: 'Songbook' },
   { id: 'drills', label: 'Drills' },
   { id: 'tools', label: 'Tools' },
   { id: 'progress', label: 'Progress' },
