@@ -2,11 +2,15 @@ import { noteToChromatic } from '../data/notes.js';
 import {
   SCALES,
   HARM_MINOR_SCALES,
+  MELODIC_MINOR_SCALES,
   DIATONIC,
   DIATONIC_7TH,
   HARM_MINOR_DIATONIC,
   HARM_MINOR_DIATONIC_7TH,
+  MELODIC_MINOR_DIATONIC,
+  MELODIC_MINOR_DIATONIC_7TH,
 } from '../data/scales.js';
+import { getTrack } from '../data/tracks.js';
 
 function buildChords(scale, defs, withSeventh) {
   if (!scale) return [];
@@ -51,15 +55,25 @@ export function getHarmMinor7ths(key) {
   return buildChords(HARM_MINOR_SCALES[key], HARM_MINOR_DIATONIC_7TH, true);
 }
 
+export function getMelMinorTriads(key) {
+  return buildChords(MELODIC_MINOR_SCALES[key], MELODIC_MINOR_DIATONIC, false);
+}
+
+export function getMelMinor7ths(key) {
+  return buildChords(MELODIC_MINOR_SCALES[key], MELODIC_MINOR_DIATONIC_7TH, true);
+}
+
 // Track-aware conveniences used across pages
 export function getTriadsFor(track, key) {
-  return track === 'major' ? getDiatonicTriads(key) : getHarmMinorTriads(key);
+  const t = getTrack(track);
+  return buildChords(t.scales[key], t.triads, false);
 }
 
 export function getSeventhsFor(track, key) {
-  return track === 'major' ? getDiatonic7ths(key) : getHarmMinor7ths(key);
+  const t = getTrack(track);
+  return buildChords(t.scales[key], t.sevenths, true);
 }
 
 export function getScaleFor(track, key) {
-  return (track === 'major' ? SCALES : HARM_MINOR_SCALES)[key];
+  return getTrack(track).scales[key];
 }

@@ -1,8 +1,9 @@
 import { SCHEDULE } from './schedule.js';
 import { SCHEDULE_HARM_MINOR } from './scheduleHarmMinor.js';
-import { CHROMATIC_BLOCKS, CHROMATIC_BLOCKS_HM } from './chromaticism.js';
+import { SCHEDULE_MELODIC_MINOR } from './scheduleMelodicMinor.js';
+import { CHROMATIC_BLOCKS, CHROMATIC_BLOCKS_HM, CHROMATIC_BLOCKS_MM } from './chromaticism.js';
 
-// The base schedule files are verbatim legacy extractions and stay untouched;
+// The major/HM base schedules are verbatim legacy extractions and stay untouched;
 // curriculum extensions (chromaticism) merge in here at runtime.
 function merge(base, extras) {
   return base.map((day, i) => {
@@ -19,6 +20,7 @@ function merge(base, extras) {
 const MERGED = {
   major: merge(SCHEDULE, CHROMATIC_BLOCKS),
   'harmonic-minor': merge(SCHEDULE_HARM_MINOR, CHROMATIC_BLOCKS_HM),
+  'melodic-minor': merge(SCHEDULE_MELODIC_MINOR, CHROMATIC_BLOCKS_MM),
 };
 
 export function getSchedule(track) {

@@ -12,12 +12,23 @@ export const MODES = [
 // ── Harmonic Minor Modes ──
 export const HM_MODES = [
   { name: 'Harmonic Minor',    semitones: [0,2,3,5,7,8,11], numeral: ['i','ii°','III+','iv','V','VI','vii°'] },
-  { name: 'Locrian ♮6',        semitones: [0,1,3,5,6,9,10], numeral: ['i°','♭II','♭iii','iv','♭V','VI','♭vii'] },
-  { name: 'Ionian ♯5',         semitones: [0,2,4,5,8,9,11], numeral: ['I','ii','iii','IV','♯V','vi','vii°'] },
-  { name: 'Dorian ♯4',         semitones: [0,2,3,6,7,9,10], numeral: ['i','ii','♭III','♯IV','v','vi°','♭VII'] },
-  { name: 'Phrygian Dominant', semitones: [0,1,4,5,7,8,10], numeral: ['I','♭II','iii°','iv','v','♭VI','♭vii'] },
-  { name: 'Lydian ♯2',         semitones: [0,3,4,6,7,9,11], numeral: ['I','♯II','iii','♯iv°','V','vi','vii'] },
-  { name: 'Ultra Locrian',    semitones: [0,1,3,4,6,8,9],  numeral: ['i°','♭ii','♭iii°','♭iv','♭V','♭VI','♭♭vii'] },
+  { name: 'Locrian ♮6',        semitones: [0,1,3,5,6,9,10], numeral: ['i°','♭II+','♭iii','IV','♭V','vi°','♭vii'] },
+  { name: 'Ionian ♯5',         semitones: [0,2,4,5,8,9,11], numeral: ['I+','ii','III','IV','♯v°','vi','vii°'] },
+  { name: 'Dorian ♯4',         semitones: [0,2,3,6,7,9,10], numeral: ['i','II','♭III','♯iv°','v','vi°','♭VII+'] },
+  { name: 'Phrygian Dominant', semitones: [0,1,4,5,7,8,10], numeral: ['I','♭II','iii°','iv','v°','♭VI+','♭vii'] },
+  { name: 'Lydian ♯2',         semitones: [0,3,4,6,7,9,11], numeral: ['I','♯ii°','iii','♯iv°','V+','vi','VII'] },
+  { name: 'Ultra Locrian',    semitones: [0,1,3,4,6,8,9],  numeral: ['i°','♭ii','♭iii°','♭IV+','♭v','♭VI','♭♭VII'] },
+];
+
+// ── Melodic Minor Modes (jazz melodic minor) ──
+export const MM_MODES = [
+  { name: 'Melodic Minor',     semitones: [0,2,3,5,7,9,11], numeral: ['i','ii','♭III+','IV','V','vi°','vii°'] },
+  { name: 'Dorian ♭2',         semitones: [0,1,3,5,7,9,10], numeral: ['i','♭II+','♭III','IV','v°','vi°','♭vii'] },
+  { name: 'Lydian Augmented',  semitones: [0,2,4,6,8,9,11], numeral: ['I+','II','III','♯iv°','♯v°','vi','vii'] },
+  { name: 'Lydian Dominant',   semitones: [0,2,4,6,7,9,10], numeral: ['I','II','iii°','♯iv°','v','vi','♭VII+'] },
+  { name: 'Mixolydian ♭6',     semitones: [0,2,4,5,7,8,10], numeral: ['I','ii°','iii°','iv','v','♭VI+','♭VII'] },
+  { name: 'Locrian ♮2',        semitones: [0,2,3,5,6,8,10], numeral: ['i°','ii°','♭iii','iv','♭V+','♭VI','♭VII'] },
+  { name: 'Altered',           semitones: [0,1,3,4,6,8,10], numeral: ['i°','♭ii','♭iii','♭IV+','♭V','♭VI','♭vii°'] },
 ];
 
 export const MODE_NAMES = ['Ionian','Dorian','Phrygian','Lydian','Mixolydian','Aeolian','Locrian'];
@@ -39,3 +50,16 @@ export const HARM_MINOR_MODE_NAMES = [
 ];
 export const HARM_MINOR_MODE_QUALITY = ['min','dim','aug','min','maj','maj','dim'];
 export const HARM_MINOR_MODE_OFFSETS = [0, 2, 3, 5, 7, 8, 11];
+
+// Melodic minor mode names (jazz usage)
+export const MELODIC_MINOR_MODE_NAMES = [
+  'Melodic Minor',     // 1 — jazz minor
+  'Dorian ♭2',         // 2 — sus♭9
+  'Lydian Augmented',  // 3 — maj7♯5
+  'Lydian Dominant',   // 4 — 7♯11
+  'Mixolydian ♭6',     // 5
+  'Locrian ♮2',        // 6 — m7♭5
+  'Altered',           // 7 — 7alt (super Locrian)
+];
+export const MELODIC_MINOR_MODE_QUALITY = ['min','min','aug','maj','maj','dim','dim'];
+export const MELODIC_MINOR_MODE_OFFSETS = [0, 2, 3, 5, 7, 9, 11];

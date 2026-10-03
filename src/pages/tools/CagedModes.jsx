@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
 import { CHROMATIC, CHROMATIC_FLAT, normalizeKey } from '../../data/notes.js';
 import { FAMILY_COLORS } from '../../data/colors.js';
-import {
-  getCagedModesForRoot, getCagedFamily, getModesMatrix,
-  getHmCagedModesForRoot, getHmCagedFamily, getHmModesMatrix,
-} from '../../theory/cagedModes.js';
+import { getModesForRoot, getModeFamily, getModeMatrix } from '../../theory/cagedModes.js';
+import { getTrack } from '../../data/tracks.js';
 import ToolView from '../../components/ui/ToolView.jsx';
 
 const QUALITY_LABEL = { maj: 'Major', min: 'Minor', aug: 'Aug', dim: 'Dim' };
@@ -14,17 +12,14 @@ export default function CagedModes({ onClose }) {
   const { currentKey, track } = useAppState();
   const [useFlats, setUseFlats] = useState(false);
 
-  const isMaj = track === 'major';
-  const getRoot = isMaj ? getCagedModesForRoot : getHmCagedModesForRoot;
-  const getFamily = isMaj ? getCagedFamily : getHmCagedFamily;
-  const getMatrix = isMaj ? getModesMatrix : getHmModesMatrix;
-  const scaleLabel = isMaj ? 'Major' : 'Harm. Minor';
-  const parentLabel = isMaj ? 'major' : 'harm. minor';
+  const t = getTrack(track);
+  const scaleLabel = t.short;
+  const parentLabel = t.lower;
   const noteSet = useFlats ? CHROMATIC_FLAT : CHROMATIC;
 
   return (
     <ToolView
-      title={isMaj ? 'CAGED Modes' : 'CAGED HM Modes'}
+      title={t.abbr ? `CAGED ${t.abbr} Modes` : 'CAGED Modes'}
       badge={currentKey}
       onClose={onClose}
       controls={
@@ -44,7 +39,7 @@ export default function CagedModes({ onClose }) {
                 <tr><th>Mode</th><th>Quality</th><th>Parent Key</th></tr>
               </thead>
               <tbody>
-                {getRoot(currentKey, useFlats).map((m, i) => (
+                {getModesForRoot(track, currentKey, useFlats).map((m, i) => (
                   <tr key={i} className={i === 0 ? 'cm-highlight' : ''}>
                     <td>
                       <span className="cm-root">{m.root}</span>{' '}
@@ -68,7 +63,7 @@ export default function CagedModes({ onClose }) {
                 <tr><th>Degree</th><th>Root</th><th>Mode</th><th>Quality</th></tr>
               </thead>
               <tbody>
-                {getFamily(currentKey, useFlats).map((m, i) => (
+                {getModeFamily(track, currentKey, useFlats).map((m, i) => (
                   <tr key={i} className={i === 0 ? 'cm-highlight' : ''}>
                     <td className="cm-degree">{m.degree}</td>
                     <td><span className="cm-root">{m.note}</span></td>
@@ -93,7 +88,7 @@ export default function CagedModes({ onClose }) {
                 </tr>
               </thead>
               <tbody>
-                {getMatrix(useFlats).map((row, ri) => (
+                {getModeMatrix(track, useFlats).map((row, ri) => (
                   <tr key={ri}>
                     <td>{row.mode}</td>
                     {row.cells.map((c, ci) => {

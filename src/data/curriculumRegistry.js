@@ -1,5 +1,6 @@
 import { getSchedule } from './scheduleMerged.js';
 import { getSong } from './songbook/index.js';
+import { getTrack } from './tracks.js';
 
 export function resolveCurriculum(context = {}) {
   if (context.curriculum === 'songbook') {
@@ -19,7 +20,7 @@ export function resolveCurriculum(context = {}) {
   return {
     curriculum: 'weekly',
     id: track,
-    title: track === 'harmonic-minor' ? 'Harmonic Minor' : 'Major',
+    title: getTrack(track).name,
     key: context.key || null,
     days: getSchedule(track),
   };

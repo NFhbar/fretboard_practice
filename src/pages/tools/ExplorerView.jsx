@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
+import { getTrack } from '../../data/tracks.js';
 import { CHROMATIC, CHROMATIC_FLAT, fretNote, noteToChromatic, normalizeKey } from '../../data/notes.js';
 import { KEY_CYCLE } from '../../data/notes.js';
 import { CAGED_NAMES } from '../../data/cagedMeta.js';
@@ -86,7 +87,7 @@ export default function ExplorerView({ onClose }) {
   return (
     <ToolView
       title="Fretboard Explorer"
-      badge={`${key} ${track === 'major' ? 'Major' : 'Harm. Minor'}`}
+      badge={`${key} ${getTrack(track).short}`}
       onClose={onClose}
       controls={
         <div className="diatonic-toggle" role="group">

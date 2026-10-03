@@ -29,6 +29,23 @@ export const HARM_MINOR_SCALES = {
   'G':  ['G','A','B♭','C','D','E♭','F♯'],
 };
 
+// ── Melodic Minor Scales — jazz (ascending) form in both directions, same key cycle ──
+// Double flats are written enharmonically (Gb: B♭♭ → A), matching HARM_MINOR_SCALES.
+export const MELODIC_MINOR_SCALES = {
+  'C':  ['C','D','E♭','F','G','A','B'],
+  'F':  ['F','G','A♭','B♭','C','D','E'],
+  'Bb': ['B♭','C','D♭','E♭','F','G','A'],
+  'Eb': ['E♭','F','G♭','A♭','B♭','C','D'],
+  'Ab': ['A♭','B♭','C♭','D♭','E♭','F','G'],
+  'Db': ['D♭','E♭','F♭','G♭','A♭','B♭','C'],
+  'Gb': ['G♭','A♭','A','C♭','D♭','E♭','F'],
+  'B':  ['B','C♯','D','E','F♯','G♯','A♯'],
+  'E':  ['E','F♯','G','A','B','C♯','D♯'],
+  'A':  ['A','B','C','D','E','F♯','G♯'],
+  'D':  ['D','E','F','G','A','B','C♯'],
+  'G':  ['G','A','B♭','C','D','E','F♯'],
+};
+
 export const DIATONIC = [
   { roman: 'I',    quality: 'Maj',  suffix: '',    intervals: '1 – 3 – 5' },
   { roman: 'ii',   quality: 'min',  suffix: 'm',   intervals: '1 – ♭3 – 5' },
@@ -70,4 +87,26 @@ export const HARM_MINOR_DIATONIC_7TH = [
   { roman: 'V7',         quality: 'dom7',    suffix: '7',      intervals: '1 – 3 – 5 – ♭7' },
   { roman: 'VImaj7',     quality: 'maj7',    suffix: 'maj7',   intervals: '1 – 3 – 5 – 7' },
   { roman: 'vii°7',      quality: 'dim7',    suffix: 'dim7',   intervals: '1 – ♭3 – ♭5 – ♭♭7' },
+];
+
+// Melodic minor diatonic triads: i, ii, III+, IV, V, vi°, vii°
+export const MELODIC_MINOR_DIATONIC = [
+  { roman: 'i',     quality: 'min',  suffix: 'm',   intervals: '1 – ♭3 – 5' },
+  { roman: 'ii',    quality: 'min',  suffix: 'm',   intervals: '1 – ♭3 – 5' },
+  { roman: 'III+',  quality: 'aug',  suffix: 'aug', intervals: '1 – 3 – ♯5' },
+  { roman: 'IV',    quality: 'Maj',  suffix: '',    intervals: '1 – 3 – 5' },
+  { roman: 'V',     quality: 'Maj',  suffix: '',    intervals: '1 – 3 – 5' },
+  { roman: 'vi°',   quality: 'dim',  suffix: 'dim', intervals: '1 – ♭3 – ♭5' },
+  { roman: 'vii°',  quality: 'dim',  suffix: 'dim', intervals: '1 – ♭3 – ♭5' },
+];
+
+// Melodic minor diatonic 7ths: imMaj7, iim7, IIImaj7♯5, IV7, V7, vim7♭5, viim7♭5
+export const MELODIC_MINOR_DIATONIC_7TH = [
+  { roman: 'imMaj7',     quality: 'mMaj7',   suffix: 'mMaj7',  intervals: '1 – ♭3 – 5 – 7' },
+  { roman: 'iim7',       quality: 'm7',      suffix: 'm7',     intervals: '1 – ♭3 – 5 – ♭7' },
+  { roman: 'IIImaj7♯5',  quality: 'maj7#5',  suffix: 'maj7♯5', intervals: '1 – 3 – ♯5 – 7' },
+  { roman: 'IV7',        quality: 'dom7',    suffix: '7',      intervals: '1 – 3 – 5 – ♭7' },
+  { roman: 'V7',         quality: 'dom7',    suffix: '7',      intervals: '1 – 3 – 5 – ♭7' },
+  { roman: 'vim7♭5',     quality: 'm7b5',    suffix: 'm7♭5',   intervals: '1 – ♭3 – ♭5 – ♭7' },
+  { roman: 'viim7♭5',    quality: 'm7b5',    suffix: 'm7♭5',   intervals: '1 – ♭3 – ♭5 – ♭7' },
 ];

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useAppState } from '../state/AppState.jsx';
 import { KEY_CYCLE } from '../data/notes.js';
-import { SCALES, HARM_MINOR_SCALES, DIATONIC, HARM_MINOR_DIATONIC } from '../data/scales.js';
+import { SCALES } from '../data/scales.js';
+import { TRACKS, TRACK_IDS, getTrack } from '../data/tracks.js';
+import { getTriadsFor } from '../theory/diatonic.js';
 import { MASTERY_ITEMS } from '../data/mastery.js';
 import { getSchedule } from '../data/scheduleMerged.js';
 
@@ -30,8 +32,8 @@ export default function PracticeHome({ onNavigate }) {
   const allBlocksDone = (block) => block.tasks.every((t) => weekTasks[t.id]);
   const masteryCount = (key) => (!mastery[key] ? 0 : Object.values(mastery[key]).filter(Boolean).length);
 
-  const scale = track === 'major' ? SCALES[currentKey] : HARM_MINOR_SCALES[currentKey];
-  const diatonicDefs = track === 'major' ? DIATONIC : HARM_MINOR_DIATONIC;
+  const trackInfo = getTrack(track);
+  const triads = getTriadsFor(track, currentKey);
 
   return (
     <div className="page">
@@ -56,16 +58,12 @@ export default function PracticeHome({ onNavigate }) {
           ))}
         </div>
         <div className="track-toggle" role="group" aria-label="Practice track">
-          <button className={track === 'major' ? 'active' : ''} aria-pressed={track === 'major'} onClick={() => updateSettings({ track: 'major' })}>
-            Major Modes
-          </button>
-          <button
-            className={track === 'harmonic-minor' ? 'active' : ''}
-            aria-pressed={track === 'harmonic-minor'}
-            onClick={() => updateSettings({ track: 'harmonic-minor' })}
-          >
-            Harmonic Minor
-          </button>
+          {TRACK_IDS.map((id) => (
+            <button key={id} className={track === id ? 'active' : ''} aria-pressed={track === id} onClick={() => updateSettings({ track: id })}>
+              <span className="track-toggle-full">{TRACKS[id].toggleLabel}</span>
+              <span className="track-toggle-short">{TRACKS[id].short}</span>
+            </button>
+          ))}
         </div>
         <div className="week-meta">
           <div className="week-meta-item">
@@ -101,8 +99,8 @@ export default function PracticeHome({ onNavigate }) {
 
       <div className="theory-section card">
         <div className="theory-header">
-          <div className="theory-title">{track === 'major' ? 'Diatonic Triads' : 'Harmonic Minor Triads'}</div>
-          <div className="badge-gold">{currentKey} {track === 'major' ? 'Major' : 'Harmonic Minor'}</div>
+          <div className="theory-title">{trackInfo.harmonyTitle} Triads</div>
+          <div className="badge-gold">{currentKey} {trackInfo.name}</div>
         </div>
         <div className="table-scroll">
           <table className="theory-table">
@@ -116,22 +114,19 @@ export default function PracticeHome({ onNavigate }) {
               </tr>
             </thead>
             <tbody>
-              {scale &&
-                diatonicDefs.map((d, i) => {
-                  const root = scale[i];
-                  const third = scale[(i + 2) % 7];
-                  const fifth = scale[(i + 4) % 7];
-                  const qClass = d.quality === 'Maj' ? 'quality-maj' : d.quality === 'min' ? 'quality-min' : d.quality === 'aug' ? 'quality-aug' : 'quality-dim';
-                  return (
-                    <tr key={i}>
-                      <td className="roman-cell">{d.roman}</td>
-                      <td className="chord-cell">{root}{d.suffix}</td>
-                      <td className={`quality-cell ${qClass}`}>{d.quality}</td>
-                      <td className="notes-cell">{root} – {third} – {fifth}</td>
-                      <td className="intervals-cell">{d.intervals}</td>
-                    </tr>
-                  );
-                })}
+              {triads.map((d, i) => {
+                const { root, third, fifth } = d;
+                const qClass = d.quality === 'Maj' ? 'quality-maj' : d.quality === 'min' ? 'quality-min' : d.quality === 'aug' ? 'quality-aug' : 'quality-dim';
+                return (
+                  <tr key={i}>
+                    <td className="roman-cell">{d.roman}</td>
+                    <td className="chord-cell">{root}{d.suffix}</td>
+                    <td className={`quality-cell ${qClass}`}>{d.quality}</td>
+                    <td className="notes-cell">{root} – {third} – {fifth}</td>
+                    <td className="intervals-cell">{d.intervals}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

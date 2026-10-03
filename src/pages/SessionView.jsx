@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppState } from '../state/AppState.jsx';
+import { getTrack } from '../data/tracks.js';
 import { resolveSessionDay } from '../data/curriculumRegistry.js';
 import { useSession, getSession, sessionStore, readSessionDraft, timerNow, fmtMs } from '../state/sessionStore.js';
 import { useWakeLock } from '../hooks/useWakeLock.js';
@@ -164,7 +165,7 @@ export default function SessionView({ dayIdx, curriculum = 'weekly', songId = nu
     const dDay = draftResolved.day;
     const draftLabel = draft.curriculum === 'songbook'
       ? `${draftResolved.title} · ${draft.key}`
-      : `${draft.key} ${draft.track === 'major' ? 'Major' : 'Harm. Minor'}`;
+      : `${draft.key} ${getTrack(draft.track).short}`;
     return (
       <div className="session-screen">
         <div className="session-summary">
@@ -210,7 +211,7 @@ export default function SessionView({ dayIdx, curriculum = 'weekly', songId = nu
           <div className="session-summary-sub">
             {summary.day} — {summary.focus} · {summary.curriculum === 'songbook'
               ? summary.songTitle
-              : `${summary.key} ${summary.track === 'major' ? 'Major' : 'Harm. Minor'}`}
+              : `${summary.key} ${getTrack(summary.track).short}`}
           </div>
           <div className="session-stat-row">
             <div className="session-stat">

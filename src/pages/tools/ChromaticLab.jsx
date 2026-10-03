@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
+import { getTrack } from '../../data/tracks.js';
 import { fretNote, noteToChromatic, normalizeKey } from '../../data/notes.js';
 import { CAGED_NAMES } from '../../data/cagedMeta.js';
 import { TRIAD_COLORS } from '../../data/colors.js';
@@ -230,7 +231,7 @@ export default function ChromaticLab({ onClose }) {
   return (
     <ToolView
       title="Chromaticism Lab"
-      badge={`${currentKey} ${track === 'major' ? 'Major' : 'Harm. Minor'}`}
+      badge={`${currentKey} ${getTrack(track).short}`}
       onClose={onClose}
     >
       <div className="explorer-controls">

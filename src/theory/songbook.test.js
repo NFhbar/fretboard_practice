@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TAKE_THE_A_TRAIN } from '../data/songbook/takeTheATrain.js';
 import { TAKE_THE_A_TRAIN_WEEK } from '../data/songbook/takeTheATrainWeek.js';
 import { getSchedule } from '../data/scheduleMerged.js';
+import { TRACK_IDS } from '../data/tracks.js';
 import { resolveCurriculum, resolveSessionDay, sessionPath } from '../data/curriculumRegistry.js';
 import { expandSongForm, flattenSongChanges, validateSongForm, validateSongMelody } from './songForm.js';
 import {
@@ -30,7 +31,7 @@ describe('songbook curriculum', () => {
         }
       }
     }
-    const weeklyIds = ['major', 'harmonic-minor'].flatMap((track) =>
+    const weeklyIds = TRACK_IDS.flatMap((track) =>
       getSchedule(track).flatMap((day) => day.blocks.flatMap((block) => block.tasks.map((task) => task.id)))
     );
     const all = [...weeklyIds, ...songIds];

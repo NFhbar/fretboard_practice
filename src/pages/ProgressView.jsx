@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAppState } from '../state/AppState.jsx';
+import { getTrack } from '../data/tracks.js';
 import { KEYS, readKey } from '../state/storage.js';
 import { KEY_CYCLE } from '../data/notes.js';
 import { MASTERY_ITEMS } from '../data/mastery.js';
@@ -171,7 +172,7 @@ export default function ProgressView() {
           {[...completedWeeks].reverse().map((w, i) => (
             <div key={i} className="history-row">
               <span className="badge-gold">{w.key}</span>
-              <span style={{ flex: 1 }}>Week {w.week} · {w.track === 'major' ? 'Major' : 'Harm. Minor'}</span>
+              <span style={{ flex: 1 }}>Week {w.week} · {getTrack(w.track).short}</span>
               <span style={{ color: 'var(--text-faint)' }}>{new Date(w.completedAt).toLocaleDateString()}</span>
             </div>
           ))}

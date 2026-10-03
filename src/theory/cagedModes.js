@@ -1,23 +1,12 @@
 import { CHROMATIC, CHROMATIC_FLAT, noteToChromatic, normalizeKey } from '../data/notes.js';
-import {
-  MODE_NAMES,
-  MODE_QUALITY,
-  MODE_OFFSETS,
-  HARM_MINOR_MODE_NAMES,
-  HARM_MINOR_MODE_QUALITY,
-  HARM_MINOR_MODE_OFFSETS,
-} from '../data/modes.js';
+import { getTrack } from '../data/tracks.js';
 
 const DEGREES = ['I','II','III','IV','V','VI','VII'];
 
-const TABLES = {
-  major: { names: MODE_NAMES, quality: MODE_QUALITY, offsets: MODE_OFFSETS },
-  'harmonic-minor': {
-    names: HARM_MINOR_MODE_NAMES,
-    quality: HARM_MINOR_MODE_QUALITY,
-    offsets: HARM_MINOR_MODE_OFFSETS,
-  },
-};
+function table(track) {
+  const t = getTrack(track);
+  return { names: t.modeNames, quality: t.modeQuality, offsets: t.modeOffsets };
+}
 
 function buildModesForRoot({ names, quality, offsets }, rootKey, useFlats) {
   const rootC = noteToChromatic(normalizeKey(rootKey));
@@ -55,21 +44,15 @@ function buildMatrix({ names, quality, offsets }, useFlats) {
   }));
 }
 
-export function getCagedModesForRoot(rootKey, useFlats = false) {
-  return buildModesForRoot(TABLES.major, rootKey, useFlats);
+// Each mode of `rootKey` and the parent key whose shapes it borrows.
+export function getModesForRoot(track, rootKey, useFlats = false) {
+  return buildModesForRoot(table(track), rootKey, useFlats);
 }
-export function getCagedFamily(parentKey, useFlats = false) {
-  return buildFamily(TABLES.major, parentKey, useFlats);
+// The 7 modes that share `parentKey`'s shapes.
+export function getModeFamily(track, parentKey, useFlats = false) {
+  return buildFamily(table(track), parentKey, useFlats);
 }
-export function getModesMatrix(useFlats = false) {
-  return buildMatrix(TABLES.major, useFlats);
-}
-export function getHmCagedModesForRoot(rootKey, useFlats = false) {
-  return buildModesForRoot(TABLES['harmonic-minor'], rootKey, useFlats);
-}
-export function getHmCagedFamily(parentKey, useFlats = false) {
-  return buildFamily(TABLES['harmonic-minor'], parentKey, useFlats);
-}
-export function getHmModesMatrix(useFlats = false) {
-  return buildMatrix(TABLES['harmonic-minor'], useFlats);
+// Mode × root grid, each cell tagged with its parent key.
+export function getModeMatrix(track, useFlats = false) {
+  return buildMatrix(table(track), useFlats);
 }
