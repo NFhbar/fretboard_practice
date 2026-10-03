@@ -4,7 +4,7 @@ import { getContext } from '../audio/engine.js';
 import { playChord } from '../audio/voices.js';
 import { voiceChord } from '../audio/voicing.js';
 import { CHROMATIC } from '../data/notes.js';
-import { MODE_NAMES } from '../data/modes.js';
+import { getTrack } from '../data/tracks.js';
 import { STRUM_SYMBOLS, STRUM_PRESETS } from '../data/presets.js';
 import { tonesFromQuality } from '../theory/qualities.js';
 import { useAppState } from '../state/AppState.jsx';
@@ -161,7 +161,7 @@ export default function ProgressionPlayer({ progression, barsPerChord = 1 }) {
           if (!cur) return null;
           const isObj = typeof cur === 'object';
           const label = isObj ? CHROMATIC[cur.rootIdx] + cur.suffix : cur;
-          const modeLabel = isObj ? CHROMATIC[cur.rootIdx] + ' ' + MODE_NAMES[cur.modeIdx] : '';
+          const modeLabel = isObj ? CHROMATIC[cur.rootIdx] + ' ' + getTrack(cur.family).modeNames[cur.modeIdx] : '';
           return (
             <>
               <span className="prog-current">{label}</span>

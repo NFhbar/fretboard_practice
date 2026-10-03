@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppState } from '../state/AppState.jsx';
+import { getTrack } from '../data/tracks.js';
 import { KEYS, readKey } from '../state/storage.js';
 import { buildPool, categoryStats, pickPrompts, buildAnswer } from './drill/drillGen.js';
 import { playClick, ensureRunning } from '../audio/engine.js';
@@ -132,7 +133,7 @@ export default function DrillsView() {
           <div className="drill-field">
             <div className="drill-field-label">Key</div>
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 23, color: 'var(--gold-bright)' }}>
-              {currentKey} {track === 'major' ? 'Major' : 'Harmonic Minor'}
+              {currentKey} {getTrack(track).name}
               <span style={{ fontSize: 12.5, color: 'var(--text-faint)', marginLeft: 10, fontFamily: 'var(--font-mono)' }}>
                 follows current week
               </span>

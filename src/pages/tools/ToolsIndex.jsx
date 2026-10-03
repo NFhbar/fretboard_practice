@@ -1,4 +1,5 @@
 import { useAppState } from '../../state/AppState.jsx';
+import { getTrack } from '../../data/tracks.js';
 
 const TOOLS = [
   { id: 'explorer', title: 'Fretboard Explorer', desc: 'Layered full-neck map — scale, chord tones, intervals, CAGED positions. Tap any note to hear it.' },
@@ -20,7 +21,7 @@ export default function ToolsIndex({ onOpen }) {
         <div className="header-eyebrow">Theory Tools</div>
         <div className="header-title">Tools</div>
         <div className="header-sub">
-          Key of {currentKey} · {track === 'major' ? 'Major' : 'Harmonic Minor'} track
+          Key of {currentKey} · {getTrack(track).name} track
         </div>
       </div>
       <div className="tools-grid">

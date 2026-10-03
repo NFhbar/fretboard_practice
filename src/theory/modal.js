@@ -1,5 +1,5 @@
 import { CHROMATIC, CHROMATIC_FLAT, noteToChromatic, normalizeKey } from '../data/notes.js';
-import { MODES, HM_MODES } from '../data/modes.js';
+import { getTrack } from '../data/tracks.js';
 
 function triadQuality(i3, i5) {
   if (i3 === 4 && i5 === 7) return { quality: 'maj', suffix: '' };
@@ -21,7 +21,7 @@ function seventhQuality(i3, i5, i7) {
   return { quality: 'maj7', suffix: 'maj7' };
 }
 
-// Modal interchange table for any mode set (major MODES or HM_MODES).
+// Modal interchange table for any mode set (a track's parallel modes).
 // First mode's chords are "home"; everything else not in that set is borrowed.
 function buildModalChords(modeTable, rootKey, use7ths = false, useFlats = false) {
   const rootC = noteToChromatic(normalizeKey(rootKey));
@@ -57,10 +57,7 @@ function buildModalChords(modeTable, rootKey, use7ths = false, useFlats = false)
     }));
 }
 
-export function getModalChords(rootKey, use7ths = false, useFlats = false) {
-  return buildModalChords(MODES, rootKey, use7ths, useFlats);
-}
-
-export function getHmModalChords(rootKey, use7ths = false, useFlats = false) {
-  return buildModalChords(HM_MODES, rootKey, use7ths, useFlats);
+// Parallel-mode chord table for a practice track ('major' | 'harmonic-minor' | 'melodic-minor').
+export function getModalChordsFor(track, rootKey, use7ths = false, useFlats = false) {
+  return buildModalChords(getTrack(track).modes, rootKey, use7ths, useFlats);
 }

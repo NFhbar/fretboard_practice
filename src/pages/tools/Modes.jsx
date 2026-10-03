@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
 import { CHROMATIC, CHROMATIC_FLAT, noteToChromatic, normalizeKey } from '../../data/notes.js';
-import { MODE_NAMES, HARM_MINOR_MODE_NAMES, MODE_OFFSETS, HARM_MINOR_MODE_OFFSETS } from '../../data/modes.js';
+import { getTrack } from '../../data/tracks.js';
 import { PROG_PRESETS } from '../../data/presets.js';
-import { getModalChords, getHmModalChords } from '../../theory/modal.js';
+import { getModalChordsFor } from '../../theory/modal.js';
 import ToolView from '../../components/ui/ToolView.jsx';
 import ProgressionPlayer from '../../components/ProgressionPlayer.jsx';
 
@@ -14,16 +14,16 @@ export default function Modes({ onClose }) {
   const [progChords, setProgChords] = useState([]);
   const [barsPerChord, setBarsPerChord] = useState(1);
 
-  const isMajor = track === 'major';
-  const modeOffsets = isMajor ? MODE_OFFSETS : HARM_MINOR_MODE_OFFSETS;
-  const getChordsFn = isMajor ? getModalChords : getHmModalChords;
-  const firstModeName = isMajor ? 'Ionian' : 'Harmonic Minor';
+  const t = getTrack(track);
+  const modeOffsets = t.modeOffsets;
+  const getChordsFn = (key, sevenths, flats) => getModalChordsFor(track, key, sevenths, flats);
+  const firstModeName = t.modeNames[0];
   const noteSet = useFlats ? CHROMATIC_FLAT : CHROMATIC;
   const normKey = normalizeKey(currentKey);
 
   return (
     <ToolView
-      title={isMajor ? 'Modal Interchange' : 'HM Modal Interchange'}
+      title={t.abbr ? `${t.abbr} Modal Interchange` : 'Modal Interchange'}
       badge={currentKey}
       onClose={onClose}
       controls={
@@ -56,7 +56,7 @@ export default function Modes({ onClose }) {
                   <td className="mode-name">
                     {mode.name}
                     <div className="mode-parent">
-                      = {noteSet[parentC]} {isMajor ? 'major' : 'harm. minor'} · {modeOffsets[mi] ? `−${modeOffsets[mi]}` : '0'}
+                      = {noteSet[parentC]} {t.lower} · {modeOffsets[mi] ? `−${modeOffsets[mi]}` : '0'}
                     </div>
                   </td>
                   {mode.chords.map((c, ci) => {
@@ -77,7 +77,7 @@ export default function Modes({ onClose }) {
                                 parentIdx: parentC,
                                 sourceMode: mode.name,
                                 degree: ci + 1,
-                                isHarmMinor: !isMajor,
+                                family: track,
                               },
                             ])
                           }
@@ -115,7 +115,7 @@ export default function Modes({ onClose }) {
                     parentIdx: rootC,
                     sourceMode: firstModeName,
                     degree: d + 1,
-                    isHarmMinor: !isMajor,
+                    family: track,
                   }))
                 );
               }}
@@ -132,12 +132,12 @@ export default function Modes({ onClose }) {
           {progChords.map((ch, i) => {
             const rootName = noteSet[ch.rootIdx];
             const parentName = noteSet[ch.parentIdx];
-            const chModeNames = ch.isHarmMinor ? HARM_MINOR_MODE_NAMES : MODE_NAMES;
+            const fam = getTrack(ch.family);
             return (
               <button key={i} className="prog-chord-info" onClick={() => setProgChords((prev) => prev.filter((_, j) => j !== i))} title="Remove">
                 <span className="prog-chord-name">{rootName}{ch.suffix}</span>
-                <span className="prog-chord-mode">{rootName} {chModeNames[ch.modeIdx]}</span>
-                <span className="prog-chord-parent">from {parentName} {ch.isHarmMinor ? 'harm. minor' : 'major'}</span>
+                <span className="prog-chord-mode">{rootName} {fam.modeNames[ch.modeIdx]}</span>
+                <span className="prog-chord-parent">from {parentName} {fam.lower}</span>
               </button>
             );
           })}
@@ -148,18 +148,17 @@ export default function Modes({ onClose }) {
             {progChords.map((ch, i) => {
               const rootName = noteSet[ch.rootIdx];
               const parentName = noteSet[ch.parentIdx];
-              const chModeNames = ch.isHarmMinor ? HARM_MINOR_MODE_NAMES : MODE_NAMES;
-              const chFirstMode = ch.isHarmMinor ? 'Harmonic Minor' : 'Ionian';
-              const isBorrowed = ch.sourceMode !== chFirstMode;
+              const fam = getTrack(ch.family);
+              const isBorrowed = ch.sourceMode !== fam.modeNames[0];
               return (
                 <div key={i} className="prog-analysis-row">
                   <span className="prog-analysis-chord">{rootName}{ch.suffix}</span>
                   <span className="prog-analysis-arrow">→</span>
-                  <span className="prog-analysis-mode">{rootName} {chModeNames[ch.modeIdx]}</span>
+                  <span className="prog-analysis-mode">{rootName} {fam.modeNames[ch.modeIdx]}</span>
                   <span className="prog-analysis-reason">
                     {isBorrowed
-                      ? `borrowed from ${normKey} ${ch.sourceMode} · use ${parentName} ${ch.isHarmMinor ? 'harm. minor' : 'major'} shapes`
-                      : `diatonic · degree ${ch.degree} of ${normKey} ${ch.isHarmMinor ? 'harm. minor' : 'major'}`}
+                      ? `borrowed from ${normKey} ${ch.sourceMode} · use ${parentName} ${fam.lower} shapes`
+                      : `diatonic · degree ${ch.degree} of ${normKey} ${fam.lower}`}
                   </span>
                 </div>
               );

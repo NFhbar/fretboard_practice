@@ -115,27 +115,64 @@ export function buildCagedBands(key, shapes, { fretCount = 24 } = {}) {
   return bands;
 }
 
-// Exact note positions of one CAGED form for the key — the template's scale dots
-// shifted by the same root-dot anchoring as the bands, repeated each octave.
-// Returns a Set of "string:fret" keys (string 1=high E .. 6=low E).
-export function cagedShapePositions(key, shape, { fretCount = 24 } = {}) {
+// Signed semitone shift (major-scale pc -> track-scale pc) per scale degree, keyed by the
+// major pc: e.g. melodic minor maps the 3rd down a fret (E -> E♭ in C). Empty for major.
+function degreeShifts(key, track) {
+  if (track === 'major') return {};
+  const major = getScaleFor('major', key) || [];
+  const target = getScaleFor(track, key) || [];
+  const shifts = {};
+  major.forEach((n, d) => {
+    const from = noteToChromatic(n);
+    const to = target[d] === undefined ? from : noteToChromatic(target[d]);
+    shifts[from] = ((to - from + 18) % 12) - 6; // -6..5, in practice -1..1
+  });
+  return shifts;
+}
+
+// One CAGED form's scale dots for the key — the template shifted by the same root-dot
+// anchoring as the bands, repeated each octave. Templates are major-scale shapes; for
+// other tracks each degree slides to the track's version (♭3, ♭6…, one fret at most),
+// so the form keeps its fingering instead of losing the altered notes.
+// Returns [{ string, fret, boxFret }] — boxFret is the unaltered template fret, which
+// decides which box instance (band window) a dot belongs to.
+export function cagedFormDots(key, shape, { track = 'major', fretCount = 24 } = {}) {
   const rootPc = noteToChromatic(normalizeKey(key));
   const data = CAGED_SHAPES.Major?.[shape]?.scale;
-  if (!data) return new Set();
+  if (!data) return [];
   const dots = getVariants(data)[0];
-  if (!dots || dots.length === 0) return new Set();
+  if (!dots || dots.length === 0) return [];
   const rootDot = dots.find((d) => d.r);
-  if (!rootDot) return new Set();
+  if (!rootDot) return [];
   const templatePc = (OPEN_STRINGS[6 - rootDot.s] + rootDot.f) % 12;
   const offset = (rootPc - templatePc + 12) % 12;
-  const positions = new Set();
+  const shifts = degreeShifts(key, track);
+  const out = [];
   for (const shift of [offset - 12, offset, offset + 12, offset + 24]) {
     for (const d of dots) {
-      const f = d.f + shift;
-      if (f >= 0 && f <= fretCount) positions.add(`${d.s}:${f}`);
+      const boxFret = d.f + shift;
+      const pc = (OPEN_STRINGS[6 - d.s] + boxFret) % 12;
+      const fret = boxFret + (shifts[pc] || 0);
+      if (fret >= 0 && fret <= fretCount) out.push({ string: d.s, fret, boxFret });
     }
   }
-  return positions;
+  return out;
+}
+
+// Exact note positions of one CAGED form as a Set of "string:fret" keys
+// (string 1=high E .. 6=low E).
+export function cagedShapePositions(key, shape, { track = 'major', fretCount = 24 } = {}) {
+  return new Set(cagedFormDots(key, shape, { track, fretCount }).map((d) => `${d.string}:${d.fret}`));
+}
+
+// Fret window of one playable box for a shape: the lowest full (unclamped) band above the nut.
+export function cagedBoxWindow(key, shape) {
+  const bands = buildCagedBands(key, shape);
+  if (bands.length === 0) return null;
+  const span = Math.max(...bands.map((b) => b.maxFret - b.minFret));
+  const full = bands.filter((b) => b.maxFret - b.minFret === span && b.minFret >= 1);
+  const band = (full.length ? full : bands).sort((a, b) => a.minFret - b.minFret)[0];
+  return [band.minFret, band.maxFret];
 }
 
 // Info for the tap sheet: which diatonic chords contain this pitch class.

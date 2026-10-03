@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
+import { getTrack } from '../../data/tracks.js';
 import { CHROMATIC, CHROMATIC_FLAT, fretNote, noteToChromatic, normalizeKey } from '../../data/notes.js';
 import { KEY_CYCLE } from '../../data/notes.js';
 import { CAGED_NAMES } from '../../data/cagedMeta.js';
@@ -39,8 +40,10 @@ export default function ExplorerView({ onClose }) {
     [scaleOn, chordMode, degrees, intervalsOn]
   );
 
+  // CAGED overlays are major-only (their row is hidden on other tracks)
+  const cagedOn = track === 'major' ? caged : null;
   // a selected form always reveals its notes, even with the scale layer off
-  const singleShape = !!caged && caged !== 'all';
+  const singleShape = !!cagedOn && cagedOn !== 'all';
   const baseMarkers = useMemo(
     () => buildNoteMap(key, track, singleShape ? { ...layers, scale: true } : layers, { labelMode, useFlats }),
     [key, track, layers, labelMode, useFlats, singleShape]
@@ -49,8 +52,8 @@ export default function ExplorerView({ onClose }) {
   // Single shape selected: emphasize the form's notes, dim everything else.
   // 'All' keeps the labeled region bands as an overview.
   const shapeFilter = useMemo(
-    () => (singleShape ? cagedShapePositions(key, caged) : null),
-    [key, caged, singleShape]
+    () => (singleShape ? cagedShapePositions(key, cagedOn) : null),
+    [key, cagedOn, singleShape]
   );
   const markers = useMemo(() => {
     if (!shapeFilter) return baseMarkers;
@@ -61,7 +64,7 @@ export default function ExplorerView({ onClose }) {
     });
   }, [baseMarkers, shapeFilter]);
 
-  const bands = useMemo(() => (caged === 'all' ? buildCagedBands(key, 'all') : []), [key, caged]);
+  const bands = useMemo(() => (cagedOn === 'all' ? buildCagedBands(key, 'all') : []), [key, cagedOn]);
   const chordItems = chordMode === '7ths' ? getSeventhsFor(track, key) : getTriadsFor(track, key);
 
   const onCellClick = ({ string, fret }) => {
@@ -86,7 +89,7 @@ export default function ExplorerView({ onClose }) {
   return (
     <ToolView
       title="Fretboard Explorer"
-      badge={`${key} ${track === 'major' ? 'Major' : 'Harm. Minor'}`}
+      badge={`${key} ${getTrack(track).short}`}
       onClose={onClose}
       controls={
         <div className="diatonic-toggle" role="group">

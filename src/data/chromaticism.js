@@ -1,4 +1,4 @@
-// Chromaticism curriculum — one block per day, merged into both tracks' schedules
+// Chromaticism curriculum — one block per day, merged into every track's schedule
 // at runtime (see scheduleMerged.js). Devices ladder across the week:
 // approaches → neighbors → 3-note enclosures → 4-note enclosures → bebop → integration.
 // Rhythm rule for everything here: THE TARGET LANDS ON THE BEAT, ornaments are pickups.
@@ -123,6 +123,64 @@ export const CHROMATIC_BLOCKS_HM = [
       { id: 'hm-chr-sat-2', label: 'ii°–V7–i: approach then enclose the 7th of each chord at every change' },
       { id: 'hm-chr-sat-3', label: 'Free improv over a minor drone — every phrase ends with an enclosure into a chord tone on the beat' },
       { id: 'hm-chr-sat-4', label: 'Record 8 bars. The chromatic notes should sound like bebop, not accidents — if not, the targets are drifting off the beat' },
+    ],
+  },
+];
+
+// Melodic minor variants — same devices, MM-specific color notes and ids.
+export const CHROMATIC_BLOCKS_MM = [
+  {
+    title: 'Chromaticism — Approach Notes (MM)', min: 35, tasks: [
+      { id: 'mm-chr-mon-1', label: 'Single string, approach from below — ascend the melodic minor scale on each string, target on the beat with the middle finger, chromatic pickup on the "and". 8ths at 70 BPM',
+        note: 'Use the Chromaticism Lab on the MM track. The scale has only two half steps (2–♭3 and 7–1) — those are the spots where the approach re-strikes the previous note. That is correct, keep it even.' },
+      { id: 'mm-chr-mon-2', label: 'Single string, approach from above — descend each string, approach above, target on the beat' },
+      { id: 'mm-chr-mon-3', label: 'Minor triad arpeggios (i) with approaches — all 5 positions, targets root, ♭3, 5' },
+      { id: 'mm-chr-mon-4', label: 'Diatonic MM triads i–vii° with below-approaches — one position. The III+ and the two diminished triads blur together by ear — let the beat placement keep each chord distinct' },
+    ],
+  },
+  {
+    title: 'Chromaticism — Neighbor Tones (MM)', min: 35, tasks: [
+      { id: 'mm-chr-tue-1', label: 'Single string, upper neighbor ascending / lower neighbor descending — all 6 strings',
+        note: 'Most neighbors are whole steps (two frets). Only 2/♭3 and 7/1 are half-step neighbors — feel the difference in your hand.' },
+      { id: 'mm-chr-tue-2', label: 'mMaj7 (i) and V7 arpeggios with neighbors — all 5 positions, targets root, 3rd, 5th, 7th' },
+      { id: 'mm-chr-tue-3', label: 'Diatonic MM 7th arpeggios i–vii with neighbors — one position, name each quality aloud' },
+      { id: 'mm-chr-tue-4', label: 'One bar approaches / one bar neighbors over a minor drone — chromatic pull vs. melodic minor color' },
+    ],
+  },
+  {
+    title: 'Chromaticism — 3-Note Enclosures (MM)', min: 40, tasks: [
+      { id: 'mm-chr-wed-1', label: 'Single string triplet enclosures ascending (neighbor above, approach below, target) — all 6 strings, metronome on triplets' },
+      { id: 'mm-chr-wed-2', label: 'Descending with the mirrored cell (neighbor below, approach above) — all 6 strings' },
+      { id: 'mm-chr-wed-3', label: 'Minor triad (i) and major triad (IV and V) arpeggios with enclosures — all 5 positions' },
+      { id: 'mm-chr-wed-4', label: 'mMaj7 and IV7 arpeggios with enclosures — targets root, 3rd, 5th, 7th',
+        note: 'Enclose the ♮7 of the mMaj7 and the 3rd of IV7 (the key\'s ♮6) — the two notes that define melodic minor.' },
+      { id: 'mm-chr-wed-5', label: 'Diatonic MM arpeggios i–vii° with enclosures — push 5 BPM once clean' },
+    ],
+  },
+  {
+    title: 'Chromaticism — 4-Note Enclosures (MM)', min: 40, tasks: [
+      { id: 'mm-chr-thu-1', label: 'Single string 16th cells (neighbor, target-off-beat, approach, TARGET) ascending — all 6 strings, 16th subdivision' },
+      { id: 'mm-chr-thu-2', label: 'Descending with the mirrored cell — all 6 strings' },
+      { id: 'mm-chr-thu-3', label: 'i and V triad arpeggios — 4-note cells into root, 3rd, 5th, all positions' },
+      { id: 'mm-chr-thu-4', label: 'mMaj7, V7 and m7♭5 arpeggios — cells into all four tones' },
+      { id: 'mm-chr-thu-5', label: 'Diatonic MM arpeggios i–vii° with 4-note cells — one position, strict time' },
+    ],
+  },
+  {
+    title: 'Chromaticism — Bebop Enclosures (MM)', min: 35, tasks: [
+      { id: 'mm-chr-fri-1', label: 'Double chromatic from below into V7 chord tones, then into IV7 chord tones — same cell, two dominants a whole step apart' },
+      { id: 'mm-chr-fri-2', label: 'Double chromatic from above — descending lines into i chord tones (root, ♭3, 5, ♮7)' },
+      { id: 'mm-chr-fri-3', label: 'Classic 4-note bebop cell into the 3rd of V7 and the ♭3 of i — the two guide tones of the minor cadence' },
+      { id: 'mm-chr-fri-4', label: 'Surround cell into roots and 5ths — 2 positions' },
+      { id: 'mm-chr-fri-5', label: 'Mix formulas over one octave of melodic minor — choose by hand position' },
+    ],
+  },
+  {
+    title: 'Chromaticism — Integration (MM)', min: 30, tasks: [
+      { id: 'mm-chr-sat-1', label: 'Loop i–IV7 (progression player): enclose the 3rd of each chord exactly at the change — 3-note cells, then 4-note' },
+      { id: 'mm-chr-sat-2', label: 'iim7–V7–imMaj7: approach then enclose the 7th of each chord at every change' },
+      { id: 'mm-chr-sat-3', label: 'Free improv over a minor drone — every phrase ends with an enclosure into a chord tone on the beat' },
+      { id: 'mm-chr-sat-4', label: 'Record 8 bars. The chromatic notes should sound like bebop, not accidents — if not, the targets are drifting off the beat' },
     ],
   },
 ];

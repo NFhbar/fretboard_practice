@@ -1,13 +1,13 @@
 # Fretboard Practice — Claude Code guide
 
 Guitar practice app (React 19 + Vite, zero runtime deps beyond react/react-dom). 12-week key rotation
-through the cycle of fourths, major + harmonic-minor tracks, guided sessions, drills, theory tools,
+through the cycle of fourths, three tracks (major, harmonic minor, melodic minor), guided sessions, drills, theory tools,
 and a global metronome. Pure static SPA — no backend, all state in localStorage.
 
 ## Commands
 
 - `npm run dev` — Vite dev server
-- `npm test` — vitest data-integrity suite (src/data/data.test.js); run after touching src/data or src/theory
+- `npm test` — vitest suites (src/data/data.test.js, src/theory/songbook.test.js); run after touching src/data or src/theory
 - `npm run build` — production build to dist/ (deployed on Render via render.yaml, hash routing → no rewrite rules)
 
 ## Architecture
@@ -17,8 +17,17 @@ and a global metronome. Pure static SPA — no backend, all state in localStorag
   Never hand-edit or reformat these three; re-run the script instead. The test suite pins the CAGED
   dot count (1762) to catch accidental data loss.
   **Curriculum extensions live separately**: `chromaticism.js` (freely editable content) merges into
-  both tracks' days at runtime via `scheduleMerged.js` — all schedule consumers import
+  every track's days at runtime via `scheduleMerged.js` — all schedule consumers import
   `getSchedule(track)` from there, never the raw schedule files directly.
+  `scheduleMelodicMinor.js` is hand-written (freely editable); it mirrors the HM week's day/block
+  shape and minutes, task ids are `mm-*` (tests enforce ids unique across all tracks + songbook).
+- **Tracks** (`settings.track`: `major` | `harmonic-minor` | `melodic-minor`) are registered in
+  `data/tracks.js` — labels (`name`/`short`/`lower`/`abbr`), scales, diatonic defs, mode tables.
+  Read via `getTrack(id)` / `TRACK_IDS`; never branch on `track === 'major'` except for major-only
+  features (CAGED bands — the templates are major-scale shapes). Melodic minor = jazz form (same both ways).
+  A new track needs: registry entry, scales/diatonic defs in scales.js, mode table in modes.js,
+  schedule + chromatic blocks in scheduleMerged.js. Tests check each scale against its formula and
+  every mode-table roman numeral against the computed chord quality.
 - `src/theory/` — pure derivation functions (diatonic chords, modal tables, voicing solver, note maps,
   `chromatic.js` for approach/neighbor/enclosure cells and metronome-synced playback timelines —
   rhythm rule: targets on the beat, ornaments right-aligned as pickups; descending runs mirror the

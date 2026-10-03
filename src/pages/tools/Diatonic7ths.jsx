@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
+import { getTrack } from '../../data/tracks.js';
 import { getSeventhsFor } from '../../theory/diatonic.js';
 import { TRIAD_COLORS } from '../../data/colors.js';
 import ToolView from '../../components/ui/ToolView.jsx';
@@ -20,8 +21,8 @@ export default function Diatonic7ths({ onClose }) {
 
   return (
     <ToolView
-      title={track === 'major' ? 'Diatonic 7th Chords' : 'Harmonic Minor 7th Chords'}
-      badge={`${currentKey} ${track === 'major' ? 'Major' : 'Harm. Minor'}`}
+      title={`${getTrack(track).harmonyTitle} 7th Chords`}
+      badge={`${currentKey} ${getTrack(track).short}`}
       onClose={onClose}
     >
       <div className="diatonic-controls">

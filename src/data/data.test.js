@@ -1,13 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import { SCHEDULE } from './schedule.js';
 import { SCHEDULE_HARM_MINOR } from './scheduleHarmMinor.js';
+import { SCHEDULE_MELODIC_MINOR } from './scheduleMelodicMinor.js';
 import { CAGED_SHAPES } from './cagedShapes.js';
 import { QUALITY_TABS, CAGED_NAMES, CATEGORY_LABELS, getVariants } from './cagedMeta.js';
-import { SCALES, HARM_MINOR_SCALES } from './scales.js';
+import { SCALES, HARM_MINOR_SCALES, MELODIC_MINOR_SCALES } from './scales.js';
+import { TRACKS, TRACK_IDS } from './tracks.js';
 import { KEY_CYCLE, noteToChromatic } from './notes.js';
-import { getDiatonicTriads, getDiatonic7ths, getHarmMinorTriads, getHarmMinor7ths } from '../theory/diatonic.js';
+import {
+  getDiatonicTriads,
+  getDiatonic7ths,
+  getHarmMinorTriads,
+  getHarmMinor7ths,
+  getMelMinorTriads,
+  getMelMinor7ths,
+  getTriadsFor,
+  getSeventhsFor,
+} from '../theory/diatonic.js';
+import { getModalChordsFor } from '../theory/modal.js';
+import { getModesForRoot } from '../theory/cagedModes.js';
 import { solveVoicing } from '../theory/voicingSolver.js';
-import { buildCagedBands } from '../theory/noteMap.js';
+import { buildCagedBands, cagedBoxWindow, cagedFormDots } from '../theory/noteMap.js';
 import { OPEN_STRINGS } from './notes.js';
 import { getSchedule } from './scheduleMerged.js';
 import {
@@ -16,12 +29,13 @@ import {
   ornamentsFor,
   buildTimeline,
   cagedArpTargets,
+  degreeTones,
   pcAt,
 } from '../theory/chromatic.js';
 
 describe('schedules', () => {
-  it('both tracks have 6 days with blocks and tasks', () => {
-    for (const sched of [SCHEDULE, SCHEDULE_HARM_MINOR]) {
+  it('every track has 6 days with blocks and tasks', () => {
+    for (const sched of [SCHEDULE, SCHEDULE_HARM_MINOR, SCHEDULE_MELODIC_MINOR]) {
       expect(sched).toHaveLength(6);
       for (const day of sched) {
         expect(day.day).toBeTruthy();
@@ -34,9 +48,23 @@ describe('schedules', () => {
     }
   });
 
-  it('task ids are unique across both schedules', () => {
-    const ids = [...SCHEDULE, ...SCHEDULE_HARM_MINOR].flatMap((d) => d.blocks.flatMap((b) => b.tasks.map((t) => t.id)));
+  it('task ids are unique across all schedules', () => {
+    const ids = [...SCHEDULE, ...SCHEDULE_HARM_MINOR, ...SCHEDULE_MELODIC_MINOR].flatMap((d) => d.blocks.flatMap((b) => b.tasks.map((t) => t.id)));
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('melodic minor block minutes add up to each day total', () => {
+    for (const day of SCHEDULE_MELODIC_MINOR) {
+      expect(day.blocks.reduce((a, b) => a + b.min, 0), day.day).toBe(day.totalMin);
+    }
+  });
+
+  it('melodic minor mirrors the harmonic minor week shape', () => {
+    SCHEDULE_MELODIC_MINOR.forEach((day, i) => {
+      expect(day.day).toBe(SCHEDULE_HARM_MINOR[i].day);
+      expect(day.totalMin).toBe(SCHEDULE_HARM_MINOR[i].totalMin);
+      for (const task of day.blocks.flatMap((b) => b.tasks)) expect(task.id.startsWith('mm-')).toBe(true);
+    });
   });
 });
 
@@ -74,11 +102,12 @@ describe('CAGED shapes', () => {
 });
 
 describe('theory', () => {
-  it('all 12 keys have 7-note scales in both tracks', () => {
+  it('all 12 keys have 7-note scales in every track', () => {
     for (const k of KEY_CYCLE) {
       expect(SCALES[k]).toHaveLength(7);
       expect(HARM_MINOR_SCALES[k]).toHaveLength(7);
-      for (const n of [...SCALES[k], ...HARM_MINOR_SCALES[k]]) {
+      expect(MELODIC_MINOR_SCALES[k]).toHaveLength(7);
+      for (const n of [...SCALES[k], ...HARM_MINOR_SCALES[k], ...MELODIC_MINOR_SCALES[k]]) {
         expect(noteToChromatic(n), `${k}: ${n}`).toBeGreaterThanOrEqual(0);
       }
     }
@@ -86,7 +115,7 @@ describe('theory', () => {
 
   it('diatonic builders return 7 chords with chromatic indices', () => {
     for (const k of KEY_CYCLE) {
-      for (const fn of [getDiatonicTriads, getHarmMinorTriads]) {
+      for (const fn of [getDiatonicTriads, getHarmMinorTriads, getMelMinorTriads]) {
         const triads = fn(k);
         expect(triads).toHaveLength(7);
         for (const t of triads) {
@@ -94,7 +123,7 @@ describe('theory', () => {
           expect(t.chordName).toBeTruthy();
         }
       }
-      for (const fn of [getDiatonic7ths, getHarmMinor7ths]) {
+      for (const fn of [getDiatonic7ths, getHarmMinor7ths, getMelMinor7ths]) {
         const cs = fn(k);
         expect(cs).toHaveLength(7);
         for (const c of cs) expect(c.seventhC).toBeGreaterThanOrEqual(0);
@@ -109,6 +138,72 @@ describe('theory', () => {
     expect(t[0].fifth).toBe('G');
     expect(t[4].chordName).toBe('G');
     expect(t[6].chordName).toBe('Bdim');
+  });
+
+  it('every spelled scale matches its track formula in all 12 keys', () => {
+    for (const id of TRACK_IDS) {
+      const formula = TRACKS[id].modes[0].semitones;
+      for (const k of KEY_CYCLE) {
+        const pcs = TRACKS[id].scales[k].map((n) => noteToChromatic(n));
+        const rel = pcs.map((pc) => (pc - pcs[0] + 12) % 12);
+        expect(rel, `${id} ${k}`).toEqual(formula);
+      }
+    }
+  });
+
+  it('C melodic minor harmony is spelled and qualified correctly', () => {
+    expect(MELODIC_MINOR_SCALES.C).toEqual(['C', 'D', 'E♭', 'F', 'G', 'A', 'B']);
+    expect(getTriadsFor('melodic-minor', 'C').map((c) => c.chordName)).toEqual(['Cm', 'Dm', 'E♭aug', 'F', 'G', 'Adim', 'Bdim']);
+    expect(getSeventhsFor('melodic-minor', 'C').map((c) => c.chordName)).toEqual([
+      'CmMaj7', 'Dm7', 'E♭maj7♯5', 'F7', 'G7', 'Am7♭5', 'Bm7♭5',
+    ]);
+    const qualities = getModalChordsFor('melodic-minor', 'C', true)[0].chords.map((c) => c.quality);
+    expect(qualities).toEqual(['mmaj7', 'min7', 'augmaj7', 'dom7', 'dom7', 'm7b5', 'm7b5']);
+  });
+
+  it('melodic minor modes map to the right parent keys', () => {
+    // C altered = D♭ (C♯) melodic minor; C Lydian dominant = G melodic minor
+    const modes = getModesForRoot('melodic-minor', 'C', true);
+    expect(modes.find((m) => m.mode === 'Altered').parentKey).toBe('D♭');
+    expect(modes.find((m) => m.mode === 'Lydian Dominant').parentKey).toBe('G');
+    expect(modes.find((m) => m.mode === 'Locrian ♮2').parentKey).toBe('E♭');
+  });
+});
+
+describe('track mode tables', () => {
+  const triadMark = (i3, i5) => (i3 === 3 ? (i5 === 6 ? 'dim' : 'min') : i5 === 8 ? 'aug' : 'maj');
+  const numeralMark = (n) => {
+    const body = n.replace(/[♭♯]/g, '');
+    if (body.endsWith('°')) return 'dim';
+    if (body.endsWith('+')) return 'aug';
+    return body === body.toLowerCase() ? 'min' : 'maj';
+  };
+
+  it('modes are rotations of the parent scale with matching names, offsets and qualities', () => {
+    for (const id of TRACK_IDS) {
+      const t = TRACKS[id];
+      const parent = t.modes[0].semitones;
+      expect(t.modeOffsets, id).toEqual(parent);
+      expect(t.modes.map((m) => m.name), id).toEqual(t.modeNames);
+      t.modes.forEach((mode, i) => {
+        const rotated = parent.map((_, d) => (parent[(i + d) % 7] - parent[i] + 12) % 12);
+        expect(mode.semitones, `${id} ${mode.name}`).toEqual(rotated);
+        expect(triadMark(mode.semitones[2], mode.semitones[4]), `${id} ${mode.name} quality`).toBe(t.modeQuality[i]);
+      });
+    }
+  });
+
+  it('roman numerals agree with the chord quality on every degree', () => {
+    for (const id of TRACK_IDS) {
+      for (const mode of TRACKS[id].modes) {
+        const s = mode.semitones;
+        s.forEach((root, d) => {
+          const i3 = (s[(d + 2) % 7] - root + 12) % 12;
+          const i5 = (s[(d + 4) % 7] - root + 12) % 12;
+          expect(numeralMark(mode.numeral[d]), `${id} ${mode.name} degree ${d + 1}`).toBe(triadMark(i3, i5));
+        });
+      }
+    }
   });
 });
 
@@ -157,9 +252,9 @@ describe('CAGED position bands', () => {
 });
 
 describe('merged schedule (chromaticism blocks)', () => {
-  it('adds one chromaticism block per day on both tracks with unique ids', () => {
+  it('adds one chromaticism block per day on every track with unique ids', () => {
     const ids = [];
-    for (const track of ['major', 'harmonic-minor']) {
+    for (const track of TRACK_IDS) {
       const sched = getSchedule(track);
       expect(sched).toHaveLength(6);
       for (const day of sched) {
@@ -193,6 +288,12 @@ describe('chromaticism theory', () => {
   it('handles the harmonic minor augmented-2nd neighbor', () => {
     // A harmonic minor on the A string: F at fret 8, G# at fret 11 (3-fret neighbor)
     expect(neighborFret('A', 'harmonic-minor', 5, 8, +1)).toBe(11);
+  });
+
+  it('uses the raised 6th as a whole-step neighbor in melodic minor', () => {
+    // A melodic minor on the A string: F# at fret 9, G# at fret 11, A at 12
+    expect(neighborFret('A', 'melodic-minor', 5, 9, +1)).toBe(11);
+    expect(neighborFret('A', 'melodic-minor', 5, 11, +1)).toBe(12);
   });
 
   it('mirrors enclosure cells by run direction', () => {
@@ -231,6 +332,43 @@ describe('chromaticism theory', () => {
       expect(chordPcs.has(pcAt(t.string, t.fret)), `pc at ${t.string}:${t.fret}`).toBe(true);
       expect(['R', '3', '5']).toContain(t.role);
     }
+  });
+});
+
+describe('CAGED arpeggios on every track', () => {
+  it('each box keeps every chord tone of every diatonic chord (Chromaticism Lab CAGED arp)', () => {
+    for (const track of TRACK_IDS) {
+      for (const key of KEY_CYCLE) {
+        for (const shape of CAGED_NAMES) {
+          const window = cagedBoxWindow(key, shape);
+          for (const use7th of [false, true]) {
+            for (let degree = 0; degree < 7; degree++) {
+              const tones = degreeTones(key, track, degree, use7th);
+              const want = use7th ? ['3', '5', '7', 'R'] : ['3', '5', 'R'];
+              const targets = cagedArpTargets(key, shape, tones, { track, window });
+              const roles = [...new Set(targets.map((t) => t.role))].sort();
+              expect(roles, `${track} ${key} ${shape}-shape degree ${degree + 1}${use7th ? ' 7th' : ''}`).toEqual(want);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('minor-track forms keep the major fingering, sliding altered degrees by one fret', () => {
+    for (const track of ['harmonic-minor', 'melodic-minor']) {
+      const scalePcs = new Set(TRACKS[track].scales.C.map((n) => noteToChromatic(n)));
+      for (const shape of CAGED_NAMES) {
+        const dots = cagedFormDots('C', shape, { track });
+        expect(dots.length).toBeGreaterThan(0);
+        for (const d of dots) {
+          expect(Math.abs(d.fret - d.boxFret), `${track} ${shape} ${d.string}:${d.fret}`).toBeLessThanOrEqual(1);
+          expect(scalePcs.has(pcAt(d.string, d.fret)), `${track} ${shape} ${d.string}:${d.fret}`).toBe(true);
+        }
+      }
+    }
+    // major forms are untouched
+    for (const d of cagedFormDots('C', 'E')) expect(d.fret).toBe(d.boxFret);
   });
 });
 

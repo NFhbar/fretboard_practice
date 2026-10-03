@@ -91,6 +91,12 @@ input, select { font-family: var(--font-mono); }
   color: var(--text-faint); transition: all 0.2s var(--ease); letter-spacing: 0.02em;
 }
 @media (min-width: 640px) { .track-toggle button { padding: 7px 20px; font-size: 13px; } }
+/* three tracks: short labels on phones so the toggle fits at 375px */
+.track-toggle-full { display: none; }
+@media (min-width: 640px) {
+  .track-toggle-full { display: inline; }
+  .track-toggle-short { display: none; }
+}
 .track-toggle button.active { background: var(--gold-tint-strong); color: var(--gold); }
 
 .week-meta { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
