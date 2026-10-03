@@ -20,7 +20,7 @@ import {
 import { getModalChordsFor } from '../theory/modal.js';
 import { getModesForRoot } from '../theory/cagedModes.js';
 import { solveVoicing } from '../theory/voicingSolver.js';
-import { buildCagedBands } from '../theory/noteMap.js';
+import { buildCagedBands, cagedBoxWindow, cagedFormDots } from '../theory/noteMap.js';
 import { OPEN_STRINGS } from './notes.js';
 import { getSchedule } from './scheduleMerged.js';
 import {
@@ -29,6 +29,7 @@ import {
   ornamentsFor,
   buildTimeline,
   cagedArpTargets,
+  degreeTones,
   pcAt,
 } from '../theory/chromatic.js';
 
@@ -331,6 +332,43 @@ describe('chromaticism theory', () => {
       expect(chordPcs.has(pcAt(t.string, t.fret)), `pc at ${t.string}:${t.fret}`).toBe(true);
       expect(['R', '3', '5']).toContain(t.role);
     }
+  });
+});
+
+describe('CAGED arpeggios on every track', () => {
+  it('each box keeps every chord tone of every diatonic chord (Chromaticism Lab CAGED arp)', () => {
+    for (const track of TRACK_IDS) {
+      for (const key of KEY_CYCLE) {
+        for (const shape of CAGED_NAMES) {
+          const window = cagedBoxWindow(key, shape);
+          for (const use7th of [false, true]) {
+            for (let degree = 0; degree < 7; degree++) {
+              const tones = degreeTones(key, track, degree, use7th);
+              const want = use7th ? ['3', '5', '7', 'R'] : ['3', '5', 'R'];
+              const targets = cagedArpTargets(key, shape, tones, { track, window });
+              const roles = [...new Set(targets.map((t) => t.role))].sort();
+              expect(roles, `${track} ${key} ${shape}-shape degree ${degree + 1}${use7th ? ' 7th' : ''}`).toEqual(want);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('minor-track forms keep the major fingering, sliding altered degrees by one fret', () => {
+    for (const track of ['harmonic-minor', 'melodic-minor']) {
+      const scalePcs = new Set(TRACKS[track].scales.C.map((n) => noteToChromatic(n)));
+      for (const shape of CAGED_NAMES) {
+        const dots = cagedFormDots('C', shape, { track });
+        expect(dots.length).toBeGreaterThan(0);
+        for (const d of dots) {
+          expect(Math.abs(d.fret - d.boxFret), `${track} ${shape} ${d.string}:${d.fret}`).toBeLessThanOrEqual(1);
+          expect(scalePcs.has(pcAt(d.string, d.fret)), `${track} ${shape} ${d.string}:${d.fret}`).toBe(true);
+        }
+      }
+    }
+    // major forms are untouched
+    for (const d of cagedFormDots('C', 'E')) expect(d.fret).toBe(d.boxFret);
   });
 });
 

@@ -1,6 +1,6 @@
 import { OPEN_STRINGS, noteToChromatic } from '../data/notes.js';
 import { getScaleFor, getTriadsFor, getSeventhsFor } from './diatonic.js';
-import { cagedShapePositions } from './noteMap.js';
+import { cagedFormDots } from './noteMap.js';
 
 // Chromaticism cells: target notes decorated with chromatic approaches (±1 fret),
 // diatonic neighbors (adjacent scale tone on the SAME string — middle-finger friendly),
@@ -142,15 +142,18 @@ function toneRoles(tones) {
 }
 
 // Chord-tone targets inside one CAGED form for the key: intersect the form's
-// note positions with the chord's pitch classes. Works for any quality
-// (incl. mMaj7 / HM chords) since it's pc-based, not template-based.
-export function cagedArpTargets(key, shape, tones, { targetRoles = null, window = null } = {}) {
+// note positions with the chord's pitch classes. Pass the track so minor-track
+// forms carry their altered degrees (♭3, ♭6) — otherwise the major-scale template
+// silently drops those chord tones. `window` selects one box instance by template fret.
+export function cagedArpTargets(key, shape, tones, { track = 'major', targetRoles = null, window = null } = {}) {
   const roles = toneRoles(tones);
   const targets = [];
-  for (const pos of cagedShapePositions(key, shape)) {
-    const [s, f] = pos.split(':').map(Number);
+  const seen = new Set();
+  for (const { string: s, fret: f, boxFret } of cagedFormDots(key, shape, { track })) {
     if (f < 1) continue; // keep the below-approach on the neck
-    if (window && (f < window[0] || f > window[1])) continue;
+    if (window && (boxFret < window[0] || boxFret > window[1])) continue;
+    if (seen.has(`${s}:${f}`)) continue;
+    seen.add(`${s}:${f}`);
     const role = roles[pcAt(s, f)];
     if (!role) continue;
     if (targetRoles && !targetRoles.includes(role)) continue;

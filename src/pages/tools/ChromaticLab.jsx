@@ -5,7 +5,7 @@ import { fretNote, noteToChromatic, normalizeKey } from '../../data/notes.js';
 import { CAGED_NAMES } from '../../data/cagedMeta.js';
 import { TRIAD_COLORS } from '../../data/colors.js';
 import { getTriadsFor, getSeventhsFor } from '../../theory/diatonic.js';
-import { buildCagedBands } from '../../theory/noteMap.js';
+import { cagedBoxWindow } from '../../theory/noteMap.js';
 import {
   DEVICES,
   BEBOP_FORMULAS,
@@ -62,14 +62,10 @@ export default function ChromaticLab({ onClose }) {
   const keyRootPc = noteToChromatic(normalizeKey(currentKey));
 
   // one CAGED position window (the lowest full box for this key/shape)
-  const cagedWindow = useMemo(() => {
-    if (context !== 'caged') return null;
-    const bands = buildCagedBands(currentKey, shape);
-    const span = Math.max(...bands.map((b) => b.maxFret - b.minFret));
-    const full = bands.filter((b) => b.maxFret - b.minFret === span && b.minFret >= 1);
-    const band = (full.length ? full : bands).sort((a, b) => a.minFret - b.minFret)[0];
-    return band ? [band.minFret, band.maxFret] : null;
-  }, [context, currentKey, shape]);
+  const cagedWindow = useMemo(
+    () => (context === 'caged' ? cagedBoxWindow(currentKey, shape) : null),
+    [context, currentKey, shape]
+  );
 
   const targets = useMemo(() => {
     const roleFilter = roles.length ? roles : null;
@@ -77,7 +73,7 @@ export default function ChromaticLab({ onClose }) {
     const maxFret = Math.min(range[1], 23); // keep the above-approach on the neck
     if (context === 'string') return scaleTargetsOnString(currentKey, track, string, { minFret, maxFret });
     if (context === 'caged') {
-      return cagedArpTargets(currentKey, shape, tones, { targetRoles: roleFilter, window: cagedWindow });
+      return cagedArpTargets(currentKey, shape, tones, { track, targetRoles: roleFilter, window: cagedWindow });
     }
     return fullNeckArpTargets(currentKey, track, tones, { minFret, maxFret, targetRoles: roleFilter });
   }, [context, currentKey, track, string, shape, tones, roles, cagedWindow, range]);
